@@ -1,0 +1,6 @@
+charmhelpers
+jinja2
+kubernetes
+git+https://github.com/canonical/operator@2875e73e#egg=ops
+python-keystoneclient
+git+https://opendev.org/openstack/charm-ops-openstack#egg=ops_openstack
