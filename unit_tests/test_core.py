@@ -267,6 +267,11 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
                 [
                     core.ContainerConfigFile(
                         container_names=['my-service'],
+                        path=('/etc/my-service/my-service.conf'),
+                        user='my-service',
+                        group='my-service'),
+                    core.ContainerConfigFile(
+                        container_names=['my-service'],
                         path=('/etc/apache2/sites-available/'
                               'wsgi-my-service.conf'),
                         user='root',

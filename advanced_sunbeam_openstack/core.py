@@ -50,8 +50,11 @@ class OSBaseOperatorCharm(CharmBase):
         self.adapters.add_config_adapters(self.config_adapters)
         self.framework.observe(self.on.config_changed,
                                self._on_config_changed)
-        self.container_configs = []
         self.handlers = self.setup_event_handlers()
+
+    @property
+    def container_configs(self):
+        return []
 
     @property
     def config_adapters(self):
@@ -105,10 +108,11 @@ class OSBaseOperatorCharm(CharmBase):
                                self._on_service_pebble_ready)
 
     def _on_service_pebble_ready(self, event: PebbleReadyEvent) -> None:
-        raise NotImplementedError
+        self.configure_charm()
 
     def _on_config_changed(self, event):
         raise NotImplementedError
+        self.configure_charm()
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
@@ -120,13 +124,34 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         super().__init__(framework, adapters)
         self._state.set_default(db_ready=False)
         self._state.set_default(bootstrapped=False)
-        self.container_configs = [
+
+    @property
+    def container_configs(self):
+        _cconfigs = super().container_configs
+        _cconfigs.extend([
+            ContainerConfigFile(
+                [self.wsgi_container_name],
+                self.service_conf,
+                self.service_user,
+                self.service_group),
             ContainerConfigFile(
                 [self.wsgi_container_name],
                 self.wsgi_conf,
                 'root',
-                'root')]
-        self.write_config()
+                'root')])
+        return _cconfigs
+
+    @property
+    def service_user(self):
+        return self.service_name
+
+    @property
+    def service_group(self):
+        return self.service_name
+
+    @property
+    def service_conf(self):
+        return f'/etc/{self.service_name}/{self.service_name}.conf'
 
     @property
     def config_adapters(self):
