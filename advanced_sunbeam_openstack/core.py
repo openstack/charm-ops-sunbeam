@@ -111,7 +111,6 @@ class OSBaseOperatorCharm(CharmBase):
         self.configure_charm()
 
     def _on_config_changed(self, event):
-        raise NotImplementedError
         self.configure_charm()
 
 
