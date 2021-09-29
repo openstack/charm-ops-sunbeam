@@ -73,7 +73,7 @@ class PebbleHandler(ops.charm.Object):
             combine=True)
         logger.debug(f'Plan: {container.get_plan()}')
         self.is_ready = True
-        self.charm._configure_charm(event)
+        self.charm.configure_charm(event)
         self._state.pebble_ready = True
 
     def write_config(self):
@@ -129,7 +129,7 @@ class WSGIPebbleHandler(PebbleHandler):
         self.wsgi_service_name = wsgi_service_name
 
     def start_wsgi(self):
-        container = self.unit.get_container(self.container_name)
+        container = self.charm.unit.get_container(self.container_name)
         if not container:
             logger.debug(f'{self.container_name} container is not ready. '
                          'Cannot start wgi service.')
@@ -160,7 +160,7 @@ class WSGIPebbleHandler(PebbleHandler):
         }
 
     def init_service(self):
-        container = self.unit.get_container(self.container_name)
+        container = self.charm.unit.get_container(self.container_name)
         self.write_config()
         try:
             sunbeam_cprocess.check_output(
@@ -172,6 +172,7 @@ class WSGIPebbleHandler(PebbleHandler):
             # ignore for now - pebble is raising an exited too quickly, but it
             # appears to work properly.
         self.start_wsgi()
+        self._state.service_ready = True
 
     @property
     def wsgi_conf(self):
@@ -193,7 +194,6 @@ class RelationHandler(ops.charm.Object):
         self.charm = charm
         self.relation_name = relation_name
         self.callback_f = callback_f
-        self.is_ready = False
         self.interface = self.setup_event_handler()
 
     def setup_event_handler(self):
@@ -201,6 +201,10 @@ class RelationHandler(ops.charm.Object):
 
     def get_interface(self):
         return self.interface, self.relation_name
+
+    @property
+    def is_ready(self):
+        raise NotImplementedError
 
 
 class IngressHandler(RelationHandler):
@@ -232,6 +236,11 @@ class IngressHandler(RelationHandler):
             'service-hostname': svc_hostname,
             'service-name': self.charm.app.name,
             'service-port': port}
+
+    @property
+    def is_ready(self):
+        # Nothing to wait for
+        return True
 
 
 class DBHandler(RelationHandler):
@@ -270,8 +279,12 @@ class DBHandler(RelationHandler):
         credentials = self.interface.credentials()
         # XXX Lets not log the credentials
         logger.info(f'Received credentials: {credentials}')
-        self.is_ready = True
         self.callback_f(event)
+
+    @property
+    def is_ready(self):
+        # Nothing to wait for
+        return bool(self.interface.databases())
 
 
 class OSBaseOperatorCharm(ops.charm.CharmBase):
@@ -286,7 +299,8 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self.adapters.add_config_adapters(self.config_adapters)
         # Setup the observers for relationship events and pass the interfaces
         # to the adapter classes.
-        for handler in self.relation_handlers():
+        self.relation_handlers = self.get_relation_handlers()
+        for handler in self.relation_handlers:
             interface, relation_name = handler.get_interface()
             self.adapters.add_relation_adapter(
                 interface,
@@ -295,7 +309,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self.framework.observe(self.on.config_changed,
                                self._on_config_changed)
 
-    def relation_handlers(self):
+    def get_relation_handlers(self):
         return []
 
     def get_pebble_handlers(self):
@@ -308,9 +322,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.template_dir,
                 self.openstack_release,
                 self.adapters,
-                self._configure_charm)]
+                self.configure_charm)]
 
-    def _configure_charm(self, event):
+    def configure_charm(self, event):
         for h in self.pebble_handlers:
             if h.is_ready:
                 h.write_config()
@@ -337,7 +351,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         return 'src/templates'
 
     def _on_config_changed(self, event):
-        self.configure_charm()
+        self.configure_charm(None)
 
     def containers_ready(self):
         for ph in self.pebble_handlers:
@@ -346,10 +360,10 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 return False
         return True
 
-    def relation_adapters_ready(self):
-        for adapter in self.adapters:
-            if not adapter[1].is_ready:
-                logger.info("Adapter incomplete")
+    def relation_handlers_ready(self):
+        for handler in self.relation_handlers:
+            if not handler.is_ready:
+                logger.info("Relation {} incomplete".format(handler.relation_name))
                 return False
         return True
 
@@ -374,20 +388,20 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.template_dir,
                 self.openstack_release,
                 self.adapters,
-                self._configure_charm,
+                self.configure_charm,
                 f'wsgi-{self.service_name}')]
 
-    def relation_handlers(self):
+    def get_relation_handlers(self):
         self.db = DBHandler(
             self,
             f'{self.service_name}-db',
-            self._configure_charm)
+            self.configure_charm)
         self.ingress = IngressHandler(
             self,
             'ingress',
             self.service_name,
             self.default_public_ingress_port,
-            self._configure_charm)
+            self.configure_charm)
         return [self.db, self.ingress]
 
     @property
@@ -428,8 +442,8 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     def default_public_ingress_port(self):
         raise NotImplementedError
 
-    def configure_charm(self):
-        if not self.relation_adapters_ready():
+    def configure_charm(self, event):
+        if not self.relation_handlers_ready():
             logging.debug("Aborting charm relations not ready")
             return
 
@@ -438,12 +452,13 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 ph.init_service()
 
         for ph in self.pebble_handlers:
-            if not ph.is_service_ready():
+            if not ph.is_service_ready:
                 logging.debug("Aborting container service not ready")
                 return
 
         if not self.is_bootstrapped():
             self._do_bootstrap()
+        self._do_bootstrap()
 
         self.unit.status = ops.model.ActiveStatus()
         self._state.bootstrapped = True
