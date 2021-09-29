@@ -1,4 +1,8 @@
+import logging
 import ops_openstack.adapters
+
+logger = logging.getLogger(__name__)
+
 
 class ConfigAdapter():
 
@@ -8,6 +12,10 @@ class ConfigAdapter():
         for k, v in self.context().items():
             k = k.replace('-', '_')
             setattr(self, k, v)
+
+    @property
+    def is_ready(self):
+        return True
 
 
 class CharmConfigAdapter(ConfigAdapter):
@@ -46,6 +54,14 @@ class DBAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
     @property
     def database_type(self):
         return 'mysql+pymysql'
+
+    @property
+    def is_ready(self):
+        try:
+            creds = self.relation.credentials()
+        except AttributeError:
+            return False
+        return bool(creds)
 
 
 class AMQPAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
@@ -90,6 +106,14 @@ class AMQPAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
             for host_ in hosts
         ])
         return "rabbit://{}/{}".format(transport_url_hosts, self.vhost)
+
+    @property
+    def is_ready(self):
+        try:
+            creds = self.transport_url
+        except AttributeError:
+            return False
+        return bool(creds)
 
 
 class OPSRelationAdapters():

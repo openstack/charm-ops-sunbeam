@@ -26,19 +26,21 @@ import jinja2
 
 log = logging.getLogger(__name__)
 
+
 def get_container(containers, name):
     container = None
     for c in containers:
         if c.name == name:
             container = c
-    return c
+    return container
+
 
 def sidecar_config_render(containers, container_configs, template_dir,
                           openstack_release, adapters):
     loader = get_loader(template_dir, openstack_release)
     _tmpl_env = jinja2.Environment(loader=loader)
     for config in container_configs:
-        for container_name in config.container_names: 
+        for container_name in config.container_names:
             try:
                 template = _tmpl_env.get_template(
                     os.path.basename(config.path))
@@ -52,7 +54,8 @@ def sidecar_config_render(containers, container_configs, template_dir,
                 'group': config.group}
             container.push(config.path, contents, **kwargs)
             log.debug(f'Wrote template {config.path} in container '
-                f'{container.name}.')
+                      f'{container.name}.')
+
 
 class SidecarConfigRenderer(OSConfigRenderer):
 
@@ -63,6 +66,7 @@ class SidecarConfigRenderer(OSConfigRenderer):
     def __init__(self, templates_dir, openstack_release):
         super(SidecarConfigRenderer, self).__init__(templates_dir,
                                                     openstack_release)
+
 
 class _SidecarConfigRenderer(OSConfigRenderer):
 
