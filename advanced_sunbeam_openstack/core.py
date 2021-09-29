@@ -458,7 +458,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
 
         if not self.is_bootstrapped():
             self._do_bootstrap()
-        self._do_bootstrap()
 
         self.unit.status = ops.model.ActiveStatus()
         self._state.bootstrapped = True
