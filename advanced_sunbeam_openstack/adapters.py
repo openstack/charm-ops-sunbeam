@@ -48,6 +48,48 @@ class DBAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
         return 'mysql+pymysql'
 
 
+class AMQPAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
+
+    DEFAULT_PORT = "5672"
+
+    @property
+    def port(self):
+        """Return the AMQP port
+
+        :returns: AMQP port number
+        :rtype: string
+        """
+        return self.relation.ssl_port or self.DEFAULT_PORT
+
+    @property
+    def hosts(self):
+        """
+        Comma separated list of hosts that should be used
+        to access RabbitMQ.
+        """
+        hosts = self.relation.hostnames
+        if len(hosts) > 1:
+            return ','.join(hosts)
+        else:
+            return None
+
+    @property
+    def transport_url(self) -> str:
+        """
+        oslo.messaging formatted transport URL
+
+        :returns: oslo.messaging formatted transport URL
+        :rtype: string
+        """
+        hosts = self.relation.hostnames
+        transport_url_hosts = ','.join([
+            "{}:{}@{}:{}".format(self.username,
+                                 self.password,
+                                 host_,  # TODO deal with IPv6
+                                 self.port)
+            for host_ in hosts
+        ])
+        return "rabbit://{}/{}".format(transport_url_hosts, self.vhost)
 
 
 class OPSRelationAdapters():
