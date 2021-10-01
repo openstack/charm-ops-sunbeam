@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import json
 from mock import patch
 import unittest
@@ -99,17 +100,6 @@ class MyCharm(core.OSBaseOperatorCharm):
     def __init__(self, framework):
         super().__init__(framework)
         self.seen_events = []
-        self.render_calls = []
-
-    def renderer(self, containers, container_configs, template_dir,
-                 openstack_release, adapters):
-        self.render_calls.append(
-            (
-                containers,
-                container_configs,
-                template_dir,
-                openstack_release,
-                adapters))
 
     def _log_event(self, event):
         self.seen_events.append(type(event).__name__)
@@ -120,21 +110,35 @@ class MyCharm(core.OSBaseOperatorCharm):
     def _on_config_changed(self, event):
         self._log_event(event)
 
+    def configure_charm(self, event):
+        super().configure_charm(event)
+        self._log_event(event)
+
+    def _configure_charm(self, event):
+        super()._configure_charm(event)
+        self._log_event(event)
+
     @property
     def public_ingress_port(self):
         return 789
 
 
-class TestOSBaseOperatorCharm(unittest.TestCase):
+class TestOSBaseOperatorCharm(CharmTestCase):
+
+    PATCHES = [
+        'sunbeam_templating'
+    ]
+
     def setUp(self):
+        super().setUp(core, self.PATCHES)
         self.harness = Harness(
             MyCharm,
             meta=CHARM_METADATA
         )
 
-        self.addCleanup(self.harness.cleanup)
         self.harness.update_config(CHARM_CONFIG)
         self.harness.begin()
+        self.addCleanup(self.harness.cleanup)
 
     def set_pebble_ready(self):
         container = self.harness.model.unit.get_container("my-service")
@@ -148,15 +152,12 @@ class TestOSBaseOperatorCharm(unittest.TestCase):
 
     def test_write_config(self):
         self.set_pebble_ready()
-        self.harness.charm.write_config()
-        self.assertEqual(
-            self.harness.charm.render_calls[0],
-            (
-                [self.harness.model.unit.get_container("my-service")],
-                [],
-                'src/templates',
-                'diablo',
-                self.harness.charm.adapters))
+        self.sunbeam_templating.sidecar_config_render.assert_called_once_with(
+            [self.harness.model.unit.get_container("my-service")],
+            [],
+            'src/templates',
+            'diablo',
+            self.harness.charm.adapters)
 
     def test_handler_prefix(self):
         self.assertEqual(
@@ -173,6 +174,10 @@ class TestOSBaseOperatorCharm(unittest.TestCase):
             self.harness.charm.template_dir,
             'src/templates')
 
+    def test_relation_handlers_ready(self):
+        self.assertTrue(
+            self.harness.charm.relation_handlers_ready())
+
 
 class MyAPICharm(core.OSBaseOperatorAPICharm):
     openstack_release = 'diablo'
@@ -185,16 +190,6 @@ class MyAPICharm(core.OSBaseOperatorAPICharm):
         self.render_calls = []
         super().__init__(framework)
 
-    def renderer(self, containers, container_configs, template_dir,
-                 openstack_release, adapters):
-        self.render_calls.append(
-            (
-                containers,
-                container_configs,
-                template_dir,
-                openstack_release,
-                adapters))
-
     def _log_event(self, event):
         self.seen_events.append(type(event).__name__)
 
@@ -206,13 +201,14 @@ class MyAPICharm(core.OSBaseOperatorAPICharm):
         self._log_event(event)
 
     @property
-    def public_ingress_port(self):
+    def default_public_ingress_port(self):
         return 789
 
 
 class TestOSBaseOperatorAPICharm(CharmTestCase):
 
     PATCHES = [
+        'sunbeam_templating',
         'sunbeam_cprocess',
     ]
 
@@ -258,32 +254,33 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
         self.harness.container_pebble_ready('my-service')
 
     def test_write_config(self):
+        self.harness.set_leader()
         self.set_pebble_ready()
-        self.harness.charm.write_config()
-        self.assertEqual(
-            self.harness.charm.render_calls[0],
-            (
-                [self.harness.model.unit.get_container("my-service")],
-                [
-                    core.ContainerConfigFile(
-                        container_names=['my-service'],
-                        path=('/etc/my-service/my-service.conf'),
-                        user='my-service',
-                        group='my-service'),
-                    core.ContainerConfigFile(
-                        container_names=['my-service'],
-                        path=('/etc/apache2/sites-available/'
-                              'wsgi-my-service.conf'),
-                        user='root',
-                        group='root')],
-                'src/templates',
-                'diablo',
-                self.harness.charm.adapters))
+        rel_id = self.add_base_db_relation()
+        self.add_db_relation_credentials(rel_id)
+        self.sunbeam_templating.sidecar_config_render.assert_called_once_with(
+            [self.harness.model.unit.get_container("my-service")],
+            [
+                core.ContainerConfigFile(
+                    container_names=['my-service'],
+                    path=('/etc/my-service/my-service.conf'),
+                    user='my-service',
+                    group='my-service'),
+                core.ContainerConfigFile(
+                    container_names=['my-service'],
+                    path=('/etc/apache2/sites-available/'
+                          'wsgi-my-service.conf'),
+                    user='root',
+                    group='root')],
+            'src/templates',
+            'diablo',
+            self.harness.charm.adapters)
 
     def test__on_database_changed(self):
         self.harness.set_leader()
         self.set_pebble_ready()
         rel_id = self.add_base_db_relation()
+        self.add_db_relation_credentials(rel_id)
         rel_data = self.harness.get_relation_data(
             rel_id,
             'my-service')

@@ -15,6 +15,7 @@
 import logging
 from contextlib import contextmanager
 
+from ops.charm import CharmBase
 from ops.model import BlockedStatus
 
 logger = logging.getLogger(__name__)
