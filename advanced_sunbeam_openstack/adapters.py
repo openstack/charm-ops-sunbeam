@@ -14,7 +14,7 @@ class ConfigAdapter():
             setattr(self, k, v)
 
     @property
-    def is_ready(self):
+    def ready(self):
         return True
 
 
@@ -56,7 +56,7 @@ class DBAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
         return 'mysql+pymysql'
 
     @property
-    def is_ready(self):
+    def ready(self):
         try:
             creds = self.relation.credentials()
         except AttributeError:
@@ -108,7 +108,7 @@ class AMQPAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
         return "rabbit://{}/{}".format(transport_url_hosts, self.vhost)
 
     @property
-    def is_ready(self):
+    def ready(self):
         try:
             creds = self.transport_url
         except AttributeError:

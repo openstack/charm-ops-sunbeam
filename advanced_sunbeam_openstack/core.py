@@ -72,13 +72,13 @@ class PebbleHandler(ops.charm.Object):
             self.get_layer(),
             combine=True)
         logger.debug(f'Plan: {container.get_plan()}')
-        self.is_ready = True
+        self.ready = True
         self.charm.configure_charm(event)
         self._state.pebble_ready = True
 
     def write_config(self):
         for adapter in self.adapters:
-            if not adapter[1].is_ready:
+            if not adapter[1].ready:
                 logger.info("Adapter incomplete")
                 return
         container = self.charm.unit.get_container(
@@ -106,15 +106,15 @@ class PebbleHandler(ops.charm.Object):
         return []
 
     @property
-    def is_pebble_ready(self):
+    def pebble_ready(self):
         return self._state.pebble_ready
 
     @property
-    def is_config_pushed(self):
+    def config_pushed(self):
         return self._state.config_pushed
 
     @property
-    def is_service_ready(self):
+    def service_ready(self):
         return self._state.service_ready
 
 
@@ -203,7 +203,7 @@ class RelationHandler(ops.charm.Object):
         return self.interface, self.relation_name
 
     @property
-    def is_ready(self):
+    def ready(self):
         raise NotImplementedError
 
 
@@ -238,7 +238,7 @@ class IngressHandler(RelationHandler):
             'service-port': port}
 
     @property
-    def is_ready(self):
+    def ready(self):
         # Nothing to wait for
         return True
 
@@ -282,9 +282,12 @@ class DBHandler(RelationHandler):
         self.callback_f(event)
 
     @property
-    def is_ready(self):
-        # Nothing to wait for
-        return bool(self.interface.databases())
+    def ready(self):
+        try:
+            # Nothing to wait for
+            return bool(self.interface.databases())
+        except AttributeError:
+            return False
 
 
 class OSBaseOperatorCharm(ops.charm.CharmBase):
@@ -326,7 +329,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def configure_charm(self, event):
         for h in self.pebble_handlers:
-            if h.is_ready:
+            if h.ready:
                 h.write_config()
 
     @property
@@ -355,15 +358,16 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def containers_ready(self):
         for ph in self.pebble_handlers:
-            if not ph.is_service_ready:
+            if not ph.service_ready:
                 logger.info("Container incomplete")
                 return False
         return True
 
     def relation_handlers_ready(self):
         for handler in self.relation_handlers:
-            if not handler.is_ready:
-                logger.info("Relation {} incomplete".format(handler.relation_name))
+            if not handler.ready:
+                logger.info("Relation {} incomplete".format(
+                    handler.relation_name))
                 return False
         return True
 
@@ -448,15 +452,15 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
             return
 
         for ph in self.pebble_handlers:
-            if ph.is_pebble_ready:
+            if ph.pebble_ready:
                 ph.init_service()
 
         for ph in self.pebble_handlers:
-            if not ph.is_service_ready:
+            if not ph.service_ready:
                 logging.debug("Aborting container service not ready")
                 return
 
-        if not self.is_bootstrapped():
+        if not self.bootstrapped():
             self._do_bootstrap()
 
         self.unit.status = ops.model.ActiveStatus()
@@ -465,7 +469,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     def _do_bootstrap(self):
         pass
 
-    def is_bootstrapped(self):
+    def bootstrapped(self):
         """Returns True if the instance is bootstrapped.
 
         :returns: True if the keystone service has been bootstrapped,

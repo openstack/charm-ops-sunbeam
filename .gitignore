@@ -10,3 +10,4 @@ __pycache__/
 **.swp
 .stestr/
 lib/charms/nginx*
+lib/charms/sunbeam_rabbitmq*

@@ -111,6 +111,7 @@ class MyCharm(core.OSBaseOperatorCharm):
         self._log_event(event)
 
     def configure_charm(self, event):
+        super().configure_charm(event)
         self._log_event(event)
 
     def _configure_charm(self, event):
@@ -173,9 +174,9 @@ class TestOSBaseOperatorCharm(CharmTestCase):
             self.harness.charm.template_dir,
             'src/templates')
 
-    def test_adapters_ready(self):
+    def test_relation_handlers_ready(self):
         self.assertTrue(
-            self.harness.charm.relation_adapters_ready())
+            self.harness.charm.relation_handlers_ready())
 
 
 class MyAPICharm(core.OSBaseOperatorAPICharm):
