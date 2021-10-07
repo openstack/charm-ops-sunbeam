@@ -67,6 +67,16 @@ class RelationHandler(ops.charm.Object):
         """
         return self.interface, self.relation_name
 
+    def interface_properties(self):
+        property_names = [
+            p for p in dir(self.interface) if isinstance(
+                getattr(type(self.interface), p, None), property)]
+        properties = {
+            p: getattr(self.interface, p)
+            for p in property_names
+            if not p.startswith('_') and p not in ['model']}
+        return properties
+
     @property
     def ready(self) -> bool:
         """Determine with the relation is ready for use."""
@@ -74,7 +84,7 @@ class RelationHandler(ops.charm.Object):
 
     def context(self) -> dict:
         """Pull together context for rendering templates."""
-        return {}
+        return self.interface_properties()
 
 
 class IngressHandler(RelationHandler):
@@ -233,22 +243,18 @@ class AMQPHandler(RelationHandler):
             return {}
         if not hosts:
             return {}
-        hosts = ','.join(hosts)
-        port = self.interface.ssl_port or self.DEFAULT_PORT
-        username = self.interface.username
-        password = self.interface.password
+        ctxt = self.interface_properties()
+        ctxt['hosts'] = ','.join(ctxt['hostnames'])
+        ctxt['port'] = ctxt.get('ssl_port') or self.DEFAULT_PORT
         transport_url_hosts = ','.join([
-            "{}:{}@{}:{}".format(username,
-                                 password,
+            "{}:{}@{}:{}".format(self.username,
+                                 ctxt['password'],
                                  host_,  # TODO deal with IPv6
-                                 port)
-            for host_ in self.interface.hostnames
+                                 ctxt['port'])
+            for host_ in ctxt['hostnames']
         ])
         transport_url = "rabbit://{}/{}".format(
             transport_url_hosts,
             self.vhost)
-        ctxt = {
-            'port': port,
-            'hosts': hosts,
-            'transport_url': transport_url}
+        ctxt['transport_url'] = transport_url
         return ctxt

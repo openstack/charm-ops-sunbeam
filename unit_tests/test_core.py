@@ -225,6 +225,7 @@ TEMPLATE_CONTENTS = """
 {{ my_service_db.database_password }}
 {{ options.debug }}
 {{ amqp.transport_url }}
+{{ amqp.hostname }}
 """
 
 
@@ -395,7 +396,8 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
             '/bin/wsgi_admin',
             'hardpassword',
             'true',
-            'rabbit://my-service:rabbit.pass@10.0.0.13:5672/my-service']
+            'rabbit://my-service:rabbit.pass@10.0.0.13:5672/my-service',
+            'rabbithost1.local']
         expect_string = '\n' + '\n'.join(expect_entries)
         self.assertEqual(
             self.container_calls['push']['/etc/my-service/my-service.conf'],
