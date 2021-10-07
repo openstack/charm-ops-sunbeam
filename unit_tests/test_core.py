@@ -282,7 +282,7 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
 
         super().setUp(sunbeam_charm, self.PATCHES)
 
-        class _LYTestingPebbleClient(_TestingPebbleClient):
+        class _OSTestingPebbleClient(_TestingPebbleClient):
 
             def push(
                     self, path, source, *,
@@ -302,12 +302,12 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
             def remove_path(self, path, *, recursive=False):
                 container_calls['remove_path'].append(path)
 
-        class _LYTestingModelBackend(_TestingModelBackend):
+        class _OSTestingModelBackend(_TestingModelBackend):
 
             def get_pebble(self, socket_path: str):
                 client = self._pebble_clients.get(socket_path, None)
                 if client is None:
-                    client = _LYTestingPebbleClient(self)
+                    client = _OSTestingPebbleClient(self)
                     self._pebble_clients[socket_path] = client
                 return client
 
@@ -317,7 +317,7 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
             MyAPICharm,
             meta=API_CHARM_METADATA
         )
-        self.harness._backend = _LYTestingModelBackend(
+        self.harness._backend = _OSTestingModelBackend(
             self.harness._unit_name, self.harness._meta)
         self.harness._model = model.Model(
             self.harness._meta,
