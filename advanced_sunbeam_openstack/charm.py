@@ -60,8 +60,31 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                                self._on_config_changed)
 
     def get_relation_handlers(self) -> List[sunbeam_rhandlers.RelationHandler]:
-        """Relation handlers for the operator."""
-        return []
+        """Relation handlers for the service."""
+        handlers = []
+        if 'amqp' in self.meta.relations.keys():
+            self.amqp = sunbeam_rhandlers.AMQPHandler(
+                self,
+                'amqp',
+                self.configure_charm,
+                self.service_name,
+                self.service_name)
+            handlers.append(self.amqp)
+        if f'{self.service_name}-db' in self.meta.relations.keys():
+            self.db = sunbeam_rhandlers.DBHandler(
+                self,
+                f'{self.service_name}-db',
+                self.configure_charm)
+            handlers.append(self.db)
+        if 'ingress' in self.meta.relations.keys():
+            self.ingress = sunbeam_rhandlers.IngressHandler(
+                self,
+                'ingress',
+                self.service_name,
+                self.default_public_ingress_port,
+                self.configure_charm)
+            handlers.append(self.ingress)
+        return handlers
 
     def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
         """Pebble handlers for the operator."""
@@ -188,33 +211,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.openstack_release,
                 self.configure_charm,
                 f'wsgi-{self.service_name}')]
-
-    def get_relation_handlers(self) -> List[sunbeam_rhandlers.RelationHandler]:
-        """Relation handlers for the service."""
-        handlers = []
-        if 'amqp' in self.meta.relations.keys():
-            self.amqp = sunbeam_rhandlers.AMQPHandler(
-                self,
-                'amqp',
-                self.configure_charm,
-                self.service_name,
-                self.service_name)
-            handlers.append(self.amqp)
-        if f'{self.service_name}-db' in self.meta.relations.keys():
-            self.db = sunbeam_rhandlers.DBHandler(
-                self,
-                f'{self.service_name}-db',
-                self.configure_charm)
-            handlers.append(self.db)
-        if 'ingress' in self.meta.relations.keys():
-            self.ingress = sunbeam_rhandlers.IngressHandler(
-                self,
-                'ingress',
-                self.service_name,
-                self.default_public_ingress_port,
-                self.configure_charm)
-            handlers.append(self.ingress)
-        return handlers
 
     @property
     def container_configs(self) -> List[sunbeam_core.ContainerConfigFile]:
