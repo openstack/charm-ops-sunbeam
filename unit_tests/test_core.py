@@ -396,7 +396,7 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
             '/bin/wsgi_admin',
             'hardpassword',
             'true',
-            'rabbit://my-service:rabbit.pass@10.0.0.13:5672/my-service',
+            'rabbit://my-service:rabbit.pass@10.0.0.13:5672/openstack',
             'rabbithost1.local']
         expect_string = '\n' + '\n'.join(expect_entries)
         self.assertEqual(

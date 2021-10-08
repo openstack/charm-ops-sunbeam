@@ -67,8 +67,8 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self,
                 'amqp',
                 self.configure_charm,
-                self.service_name,
-                self.service_name)
+                self.config.get('rabbitmq-user') or self.service_name,
+                self.config.get('rabbitmq-vhost') or 'openstack')
             handlers.append(self.amqp)
         if f'{self.service_name}-db' in self.meta.relations.keys():
             self.db = sunbeam_rhandlers.DBHandler(
