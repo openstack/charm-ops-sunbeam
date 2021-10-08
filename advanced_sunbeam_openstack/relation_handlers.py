@@ -25,6 +25,8 @@ import ops.charm
 import charms.nginx_ingress_integrator.v0.ingress as ingress
 import charms.mysql.v1.mysql as mysql
 import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
+import charms.sunbeam_identity_service_operator.v0.identity_service \
+    as sunbeam_id_svc
 
 logger = logging.getLogger(__name__)
 
@@ -259,3 +261,46 @@ class AMQPHandler(RelationHandler):
             self.vhost)
         ctxt['transport_url'] = transport_url
         return ctxt
+
+
+class IdentityServiceRequiresHandler(RelationHandler):
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f,
+        service_endpoints: dict,
+        region: str,
+    ):
+        self.service_endpoints = service_endpoints
+        self.region = region
+        super().__init__(charm, relation_name, callback_f)
+
+    def setup_event_handler(self):
+        """Configure event handlers for an Identity service relation."""
+        logger.debug("Setting up Identity Service event handler")
+        id_svc = sunbeam_id_svc.IdentityServiceRequires(
+            self.charm,
+            self.relation_name,
+            self.service_endpoints,
+            self.region
+        )
+        self.framework.observe(
+            id_svc.on.ready,
+            self._on_identity_service_ready)
+        return id_svc
+
+    def _on_identity_service_ready(self, event) -> None:
+        """Handles AMQP change events."""
+        # Ready is only emitted when the interface considers
+        # that the relation is complete (indicated by a password)
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        """Handler ready for use."""
+        try:
+            return bool(self.interface.service_password)
+        except AttributeError:
+            return False

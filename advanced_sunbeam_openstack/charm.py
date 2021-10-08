@@ -59,10 +59,24 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self.framework.observe(self.on.config_changed,
                                self._on_config_changed)
 
-    def get_relation_handlers(self) -> List[sunbeam_rhandlers.RelationHandler]:
+    def can_add_handler(self, relation_name, handlers):
+        if relation_name not in self.meta.relations.keys():
+            logging.debug(
+                f"Cannot add handler for relation {relation_name}, relation "
+                "not present in charm metadata")
+            return False
+        if relation_name in [h.relation_name for h in handlers]:
+            logging.debug(
+                f"Cannot add handler for relation {relation_name}, handler "
+                "already present")
+            return False
+        return True
+
+    def get_relation_handlers(self, handlers=None) -> List[
+            sunbeam_rhandlers.RelationHandler]:
         """Relation handlers for the service."""
-        handlers = []
-        if 'amqp' in self.meta.relations.keys():
+        handlers = handlers or []
+        if self.can_add_handler('amqp', handlers):
             self.amqp = sunbeam_rhandlers.AMQPHandler(
                 self,
                 'amqp',
@@ -70,13 +84,14 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.config.get('rabbitmq-user') or self.service_name,
                 self.config.get('rabbitmq-vhost') or 'openstack')
             handlers.append(self.amqp)
-        if f'{self.service_name}-db' in self.meta.relations.keys():
+        db_svc = f'{self.service_name}-db'
+        if self.can_add_handler(db_svc, handlers):
             self.db = sunbeam_rhandlers.DBHandler(
                 self,
-                f'{self.service_name}-db',
+                db_svc,
                 self.configure_charm)
             handlers.append(self.db)
-        if 'ingress' in self.meta.relations.keys():
+        if self.can_add_handler('ingress', handlers):
             self.ingress = sunbeam_rhandlers.IngressHandler(
                 self,
                 'ingress',
@@ -198,6 +213,41 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     def __init__(self, framework):
         super().__init__(framework)
         self._state.set_default(db_ready=False)
+
+    @property
+    def service_endpoints(self):
+        return []
+
+    def get_relation_handlers(self, handlers=None) -> List[
+            sunbeam_rhandlers.RelationHandler]:
+        """Relation handlers for the service."""
+        handlers = handlers or []
+        if self.can_add_handler('identity-service', handlers):
+            self.id_svc = sunbeam_rhandlers.IdentityServiceRequiresHandler(
+                self,
+                'identity-service',
+                self.configure_charm,
+                self.service_endpoints,
+                self.model.config['region'])
+            handlers.append(self.id_svc)
+        handlers = super().get_relation_handlers(handlers)
+        return handlers
+
+    @property
+    def service_url(self):
+        return f'http://{self.service_name}:{self.default_public_ingress_port}'
+
+    @property
+    def public_url(self):
+        return self.service_url
+
+    @property
+    def admin_url(self):
+        return self.service_url
+
+    @property
+    def internal_url(self):
+        return self.service_url
 
     def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
         """Pebble handlers for the service"""
