@@ -43,10 +43,10 @@ def sidecar_config_render(containers, container_configs, template_dir,
         for container_name in config.container_names:
             try:
                 template = _tmpl_env.get_template(
-                    os.path.basename(config.path))
+                    os.path.basename(config.path) + '.j2')
             except jinja2.exceptions.TemplateNotFound:
                 template = _tmpl_env.get_template(
-                    os.path.basename(config.path) + '.j2')
+                    os.path.basename(config.path))
             container = get_container(containers, container_name)
             contents = template.render(adapters)
             kwargs = {
