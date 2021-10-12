@@ -33,6 +33,7 @@ from ops.testing import Harness, _TestingModelBackend, _TestingPebbleClient
 import advanced_sunbeam_openstack.charm as sunbeam_charm
 
 CHARM_CONFIG = {
+    'region': 'RegionOne',
     'debug': 'true'}
 
 CHARM_METADATA = '''
@@ -87,6 +88,8 @@ requires:
     interface: ingress
   amqp:
     interface: rabbitmq
+  identity-service:
+    interface: keystone
 
 peers:
   peers:
@@ -226,6 +229,7 @@ TEMPLATE_CONTENTS = """
 {{ options.debug }}
 {{ amqp.transport_url }}
 {{ amqp.hostname }}
+{{ identity_service.service_password }}
 """
 
 
@@ -356,6 +360,45 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
                 'hostname': 'rabbithost1.local',
                 'password': 'rabbit.pass'})
 
+    def add_base_identity_service_relation(self):
+        rel_id = self.harness.add_relation('identity-service', 'keystone')
+        self.harness.add_relation_unit(
+            rel_id,
+            'keystone/0')
+        self.harness.add_relation_unit(
+            rel_id,
+            'keystone/0')
+        self.harness.update_relation_data(
+            rel_id,
+            'keystone/0',
+            {'ingress-address': '10.0.0.33'})
+        return rel_id
+
+    def add_identity_service_relation_response(self, rel_id):
+        self.harness.update_relation_data(
+            rel_id,
+            'keystone',
+            {
+                'admin-domain-id': 'admindomid1',
+                'admin-project-id': 'adminprojid1',
+                'admin-user-id': 'adminuserid1',
+                'api-version': '3',
+                'auth-host': 'keystone.local',
+                'auth-port': '12345',
+                'auth-protocol': 'http',
+                'internal-host': 'keystone.internal',
+                'internal-port': '5000',
+                'internal-protocol': 'http',
+                'service-domain': 'servicedom',
+                'service-domain_id': 'svcdomid1',
+                'service-host': 'keystone.service',
+                'service-password': 'svcpass1',
+                'service-port': '5000',
+                'service-protocol': 'http',
+                'service-project': 'svcproj1',
+                'service-project-id': 'svcprojid1',
+                'service-username': 'svcuser1'})
+
     def add_base_db_relation(self):
         rel_id = self.harness.add_relation('my-service-db', 'mysql')
         self.harness.add_relation_unit(
@@ -392,12 +435,15 @@ class TestOSBaseOperatorAPICharm(CharmTestCase):
         self.add_db_relation_credentials(db_rel_id)
         amqp_rel_id = self.add_base_amqp_relation()
         self.add_amqp_relation_credentials(amqp_rel_id)
+        id_rel_id = self.add_base_identity_service_relation()
+        self.add_identity_service_relation_response(id_rel_id)
         expect_entries = [
             '/bin/wsgi_admin',
             'hardpassword',
             'true',
             'rabbit://my-service:rabbit.pass@10.0.0.13:5672/openstack',
-            'rabbithost1.local']
+            'rabbithost1.local',
+            'svcpass1']
         expect_string = '\n' + '\n'.join(expect_entries)
         self.assertEqual(
             self.container_calls['push']['/etc/my-service/my-service.conf'],
