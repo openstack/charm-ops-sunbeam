@@ -244,6 +244,7 @@ class AMQPHandler(RelationHandler):
         if not hosts:
             return {}
         ctxt = super().context()
+        ctxt['hostnames'] = list(set(ctxt['hostnames']))
         ctxt['hosts'] = ','.join(ctxt['hostnames'])
         ctxt['port'] = ctxt.get('ssl_port') or self.DEFAULT_PORT
         transport_url_hosts = ','.join([
