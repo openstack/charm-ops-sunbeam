@@ -155,6 +155,7 @@ TEMPLATE_CONTENTS = """
 {{ amqp.transport_url }}
 {{ amqp.hostname }}
 {{ identity_service.service_password }}
+{{ peers.foo }}
 """
 
 
