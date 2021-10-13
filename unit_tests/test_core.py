@@ -102,8 +102,13 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.harness.container_pebble_ready('my-service')
 
     def test_write_config(self):
+        rel_id = self.harness.add_relation('peers', 'my-service')
+        self.harness.add_relation_unit(
+            rel_id,
+            'my-service/1')
         self.harness.set_leader()
         self.set_pebble_ready()
+        self.harness.charm.leader_set("foo", "bar")
         test_utils.add_api_relations(self.harness)
         expect_entries = [
             '/bin/wsgi_admin',
@@ -111,7 +116,8 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             'true',
             'rabbit://my-service:rabbit.pass@10.0.0.13:5672/openstack',
             'rabbithost1.local',
-            'svcpass1']
+            'svcpass1',
+            'bar']
         expect_string = '\n' + '\n'.join(expect_entries)
         self.assertEqual(
             self.container_calls['push']['/etc/my-service/my-service.conf'],

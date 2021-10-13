@@ -99,6 +99,12 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.default_public_ingress_port,
                 self.configure_charm)
             handlers.append(self.ingress)
+        if self.can_add_handler('peers', handlers):
+            self.peers = sunbeam_rhandlers.BasePeerHandler(
+                self,
+                'peers',
+                self.configure_charm)
+            handlers.append(self.peers)
         return handlers
 
     def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
@@ -205,6 +211,14 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
     def bootstrapped(self) -> bool:
         """Determine whether the service has been boostrapped."""
         return self._state.bootstrapped
+
+    def leader_set(self, key: str, value: str) -> None:
+        """Set data on the peer relation."""
+        self.peers.set_app_data(key, value)
+
+    def leader_get(self, key: str) -> str:
+        """Retrieeve data from the peer relation."""
+        return self.peers.get_app_data(key)
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):

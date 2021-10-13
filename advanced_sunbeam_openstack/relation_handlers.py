@@ -27,6 +27,7 @@ import charms.mysql.v1.mysql as mysql
 import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
 import charms.sunbeam_identity_service_operator.v0.identity_service \
     as sunbeam_id_svc
+import advanced_sunbeam_openstack.interfaces as sunbeam_interfaces
 
 logger = logging.getLogger(__name__)
 
@@ -304,3 +305,37 @@ class IdentityServiceRequiresHandler(RelationHandler):
             return bool(self.interface.service_password)
         except AttributeError:
             return False
+
+
+class BasePeerHandler(RelationHandler):
+
+    def setup_event_handler(self):
+        """Configure event handlers for peer relation."""
+        logger.debug("Setting up peer event handler")
+        peer_int = sunbeam_interfaces.OperatorPeers(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(
+            peer_int.on.peers_data_changed,
+            self._on_peers_data_changed)
+        return peer_int
+
+    def _on_peers_data_changed(self, event) -> None:
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        return True
+
+    def context(self):
+        try:
+            return self.interface.get_all_app_data()
+        except AttributeError:
+            return {}
+
+    def set_app_data(self, key, value):
+        self.interface.set_app_data(key, value)
+
+    def get_app_data(self, key):
+        self.interface.get_app_data(key)
