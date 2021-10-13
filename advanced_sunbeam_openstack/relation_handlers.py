@@ -338,4 +338,4 @@ class BasePeerHandler(RelationHandler):
         self.interface.set_app_data(key, value)
 
     def get_app_data(self, key):
-        self.interface.get_app_data(key)
+        return self.interface.get_app_data(key)
