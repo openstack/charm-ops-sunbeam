@@ -1,2 +1,0 @@
-mysql lib does not seem to be published
-so as a tectical solution keep it in tree

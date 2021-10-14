@@ -89,7 +89,8 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             self.db = sunbeam_rhandlers.DBHandler(
                 self,
                 db_svc,
-                self.configure_charm)
+                self.configure_charm,
+                [self.service_name.replace('-', '_')])
             handlers.append(self.db)
         if self.can_add_handler('ingress', handlers):
             self.ingress = sunbeam_rhandlers.IngressHandler(

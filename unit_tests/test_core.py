@@ -145,7 +145,8 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             db_rel_id,
             'my-service')
         requested_db = json.loads(rel_data['databases'])[0]
-        self.assertRegex(requested_db, r'^db_.*my_service$')
+        # self.assertRegex(requested_db, r'^db_.*my_service$')
+        self.assertEqual(requested_db, 'my_service')
 
     def test_contexts(self):
         self.harness.set_leader()
