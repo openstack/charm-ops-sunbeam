@@ -168,16 +168,6 @@ class DBHandler(RelationHandler):
         logger.info(f'Received databases: {databases}')
 
         if not databases:
-            logger.info('Requesting a new database...')
-            # The mysql-k8s operator creates a database using the relation
-            # information in the form of:
-            #   db_{relation_id}_{partial_uuid}_{name_suffix}
-            # where name_suffix defaults to "". Specify it to the name of the
-            # current app to make it somewhat understandable as to what this
-            # database actually is for.
-            # NOTE(wolsen): database name cannot contain a '-'
-            name_suffix = self.charm.app.name.replace('-', '_')
-            self.interface.new_database(name_suffix=name_suffix)
             return
         credentials = self.interface.credentials()
         # XXX Lets not log the credentials
