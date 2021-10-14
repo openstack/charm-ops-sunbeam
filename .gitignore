@@ -11,3 +11,4 @@ __pycache__/
 .stestr/
 lib/charms/nginx*
 lib/charms/sunbeam_rabbitmq*
+lib/charms/sunbeam_keystone*

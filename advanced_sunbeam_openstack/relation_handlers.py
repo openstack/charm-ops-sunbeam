@@ -25,8 +25,7 @@ import ops.charm
 import charms.nginx_ingress_integrator.v0.ingress as ingress
 import charms.mysql.v1.mysql as mysql
 import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
-import charms.sunbeam_identity_service_operator.v0.identity_service \
-    as sunbeam_id_svc
+import charms.sunbeam_keystone_operator.v0.identity_service as sunbeam_id_svc
 import advanced_sunbeam_openstack.interfaces as sunbeam_interfaces
 
 logger = logging.getLogger(__name__)
