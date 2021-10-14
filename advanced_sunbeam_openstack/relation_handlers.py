@@ -23,7 +23,7 @@ from typing import Tuple
 import ops.charm
 
 import charms.nginx_ingress_integrator.v0.ingress as ingress
-import charms.mysql.v1.mysql as mysql
+import charms.sunbeam_mysql_k8s.v0.mysql as mysql
 import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
 import charms.sunbeam_keystone_operator.v0.identity_service as sunbeam_id_svc
 import advanced_sunbeam_openstack.interfaces as sunbeam_interfaces

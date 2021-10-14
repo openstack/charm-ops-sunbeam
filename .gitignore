@@ -9,6 +9,4 @@ __pycache__/
 *.py[cod]
 **.swp
 .stestr/
-lib/charms/nginx*
-lib/charms/sunbeam_rabbitmq*
-lib/charms/sunbeam_keystone*
+lib/charms/*
