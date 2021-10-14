@@ -35,24 +35,69 @@ to get the relevant information from the relation data.
 import json
 import uuid
 import logging
-
 from ops.relation import ConsumerBase
+
+from ops.framework import (
+    StoredState,
+    EventBase,
+    ObjectEvents,
+    EventSource,
+    Object,
+)
 
 LIBID = "abcdef1234"  # Will change when uploding the charm to charmhub
 LIBAPI = 1
 LIBPATCH = 0
 logger = logging.getLogger(__name__)
 
+class DatabaseConnectedEvent(EventBase):
+    """Database connected Event."""
 
-class MySQLConsumer(ConsumerBase):
+    pass
+
+
+class DatabaseReadyEvent(EventBase):
+    """Database ready for use Event."""
+
+    pass
+
+
+class DatabaseGoneAwayEvent(EventBase):
+    """Database relation has gone-away Event"""
+
+    pass
+
+
+class DatabaseServerEvents(ObjectEvents):
+    """Events class for `on`"""
+
+    connected = EventSource(DatabaseConnectedEvent)
+    ready = EventSource(DatabaseReadyEvent)
+    goneaway = EventSource(DatabaseGoneAwayEvent)
+
+
+class MySQLConsumer(Object):
     """
     MySQLConsumer lib class
     """
 
-    def __init__(self, charm, name, consumes, multi=False):
-        super().__init__(charm, name, consumes, multi)
+    on = DatabaseServerEvents()
+
+    def __init__(self, charm, relation_name: str, databases: list):
+        super().__init__(charm, relation_name)
         self.charm = charm
-        self.relation_name = name
+        self.relation_name = relation_name
+        self.request_databases = databases
+        self.framework.observe(
+            self.charm.on[relation_name].relation_joined,
+            self._on_database_relation_joined,
+        )
+
+    def _on_database_relation_joined(self, event):
+        """AMQP relation joined."""
+        logging.debug("DatabaseRequires on_joined")
+        self.on.connected.emit()
+        self.request_access(self.request_databases)
 
     def databases(self, rel_id=None) -> list:
         """
@@ -103,3 +148,11 @@ class MySQLConsumer(ConsumerBase):
         dbs = json.loads(dbs) if dbs else []
         dbs.append(db_name)
         rel.data[self.charm.app]["databases"] = json.dumps(dbs)
+
+    def request_access(self, databases: list) -> None:
+        """Request access to the AMQP server."""
+        if self.model.unit.is_leader():
+            logging.debug("Requesting AMQP user and vhost")
+            if databases:
+                rel = self.framework.model.get_relation(self.relation_name)
+                rel.data[self.charm.app]["databases"] = json.dumps(databases)

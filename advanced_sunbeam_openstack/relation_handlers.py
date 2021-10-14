@@ -137,13 +137,23 @@ class IngressHandler(RelationHandler):
 class DBHandler(RelationHandler):
     """Handler for DB relations"""
 
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f,
+        databases=None
+    ):
+        self.databases = databases
+        super().__init__(charm, relation_name, callback_f)
+
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for a MySQL relation."""
         logger.debug('Setting up DB event handler')
         db = mysql.MySQLConsumer(
             self.charm,
             self.relation_name,
-            {"mysql": ">=8"})
+            databases=self.databases)
         _rname = self.relation_name.replace('-', '_')
         db_relation_event = getattr(
             self.charm.on,
