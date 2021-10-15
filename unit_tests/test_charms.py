@@ -73,7 +73,7 @@ tags:
 subordinate: false
 
 requires:
-  my-service-db:
+  shared-db:
     interface: mysql_datastore
     limit: 1
   ingress:
@@ -150,7 +150,7 @@ class MyCharm(sunbeam_charm.OSBaseOperatorCharm):
 
 TEMPLATE_CONTENTS = """
 {{ wsgi_config.wsgi_admin_script }}
-{{ my_service_db.database_password }}
+{{ shared_db.database_password }}
 {{ options.debug }}
 {{ amqp.transport_url }}
 {{ amqp.hostname }}

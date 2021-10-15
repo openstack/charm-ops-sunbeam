@@ -158,7 +158,7 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             contexts.wsgi_config.wsgi_admin_script,
             '/bin/wsgi_admin')
         self.assertEqual(
-            contexts.my_service_db.database_password,
+            contexts.shared_db.database_password,
             'hardpassword')
         self.assertEqual(
             contexts.options.debug,

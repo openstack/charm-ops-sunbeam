@@ -120,7 +120,7 @@ def add_identity_service_relation_response(harness, rel_id):
 
 
 def add_base_db_relation(harness):
-    rel_id = harness.add_relation('my-service-db', 'mysql')
+    rel_id = harness.add_relation('shared-db', 'mysql')
     harness.add_relation_unit(
         rel_id,
         'mysql/0')
