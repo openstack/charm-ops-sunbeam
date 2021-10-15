@@ -84,13 +84,12 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.config.get('rabbitmq-user') or self.service_name,
                 self.config.get('rabbitmq-vhost') or 'openstack')
             handlers.append(self.amqp)
-        db_svc = 'shared-db'
-        if self.can_add_handler(db_svc, handlers):
+        if self.can_add_handler('shared-db', handlers):
             self.db = sunbeam_rhandlers.DBHandler(
                 self,
-                db_svc,
+                'shared-db',
                 self.configure_charm,
-                [self.service_name.replace('-', '_')])
+                self.databases)
             handlers.append(self.db)
         if self.can_add_handler('ingress', handlers):
             self.ingress = sunbeam_rhandlers.IngressHandler(
@@ -167,6 +166,14 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
     def template_dir(self) -> str:
         """Directory containing Jinja2 templates."""
         return 'src/templates'
+
+    @property
+    def databases(self) -> List[str]:
+        """Databases needed to support this charm.
+
+        Defaults to a single database matching the app name.
+        """
+        return [self.service_name.replace('-', '_')]
 
     def _on_config_changed(self, event):
         self.configure_charm(None)
