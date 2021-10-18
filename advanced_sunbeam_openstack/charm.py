@@ -255,21 +255,27 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         handlers = super().get_relation_handlers(handlers)
         return handlers
 
-    @property
-    def service_url(self):
-        return f'http://{self.service_name}:{self.default_public_ingress_port}'
+    def service_url(self, hostname):
+        return f'http://{hostname}:{self.default_public_ingress_port}'
 
     @property
     def public_url(self):
-        return self.service_url
+        svc_hostname = self.model.config.get(
+            'os-public-hostname',
+            self.service_name)
+        return self.service_url(svc_hostname)
 
     @property
     def admin_url(self):
-        return self.service_url
+        hostname = self.model.get_binding(
+            'identity-service').network.ingress_address
+        return self.service_url(hostname)
 
     @property
     def internal_url(self):
-        return self.service_url
+        hostname = self.model.get_binding(
+            'identity-service').network.ingress_address
+        return self.service_url(hostname)
 
     def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
         """Pebble handlers for the service"""
