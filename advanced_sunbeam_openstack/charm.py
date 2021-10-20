@@ -121,6 +121,11 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def configure_charm(self, event) -> None:
         """Catchall handler to cconfigure charm services."""
+        if self.supports_peer_relation and not (self.unit.is_leader() or
+                                                self.is_leader_ready()):
+            logging.debug("Leader not ready")
+            return
+
         if not self.relation_handlers_ready():
             logging.debug("Aborting charm relations not ready")
             return
@@ -136,9 +141,15 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
         if not self.bootstrapped():
             self._do_bootstrap()
+            if self.unit.is_leader() and self.supports_peer_relation:
+                self.set_leader_ready()
 
         self.unit.status = ops.model.ActiveStatus()
         self._state.bootstrapped = True
+
+    @property
+    def supports_peer_relation(self):
+        return 'peers' in self.meta.relations.keys()
 
     @property
     def container_configs(self) -> List[sunbeam_core.ContainerConfigFile]:
