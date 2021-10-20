@@ -102,11 +102,11 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.harness.container_pebble_ready('my-service')
 
     def test_write_config(self):
+        self.harness.set_leader()
         rel_id = self.harness.add_relation('peers', 'my-service')
         self.harness.add_relation_unit(
             rel_id,
             'my-service/1')
-        self.harness.set_leader()
         self.set_pebble_ready()
         self.harness.charm.leader_set({'foo': 'bar'})
         test_utils.add_api_relations(self.harness)
@@ -137,6 +137,10 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
 
     @patch('advanced_sunbeam_openstack.templating.sidecar_config_render')
     def test__on_database_changed(self, _renderer):
+        rel_id = self.harness.add_relation('peers', 'my-service')
+        self.harness.add_relation_unit(
+            rel_id,
+            'my-service/1')
         self.harness.set_leader()
         self.set_pebble_ready()
         db_rel_id = test_utils.add_base_db_relation(self.harness)
@@ -149,6 +153,10 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.assertEqual(requested_db, 'my_service')
 
     def test_contexts(self):
+        rel_id = self.harness.add_relation('peers', 'my-service')
+        self.harness.add_relation_unit(
+            rel_id,
+            'my-service/1')
         self.harness.set_leader()
         self.set_pebble_ready()
         db_rel_id = test_utils.add_base_db_relation(self.harness)
