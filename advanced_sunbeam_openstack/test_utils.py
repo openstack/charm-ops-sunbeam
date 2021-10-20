@@ -15,11 +15,16 @@
 # limitations under the License.
 
 
+import inspect
 import io
 import json
-from mock import patch
-import unittest
+import os
+import pathlib
 import sys
+import unittest
+import yaml
+
+from mock import patch
 
 sys.path.append('lib')  # noqa
 sys.path.append('src')  # noqa
@@ -159,7 +164,8 @@ def add_api_relations(harness):
             add_base_identity_service_relation(harness))
 
 
-def get_harness(charm_class, charm_meta, container_calls):
+def get_harness(charm_class, charm_metadata=None, container_calls=None,
+                charm_config=None):
 
     class _OSTestingPebbleClient(_TestingPebbleClient):
 
@@ -190,9 +196,34 @@ def get_harness(charm_class, charm_meta, container_calls):
                 self._pebble_clients[socket_path] = client
             return client
 
+        def network_get(self, endpoint_name, relation_id=None):
+            network_data = {
+                'bind-addresses': [{
+                    'interface-name': 'eth0',
+                    'addresses': [{
+                        'cidr': '10.0.0.0/24',
+                        'value': '10.0.0.10'}]}],
+                'ingress-addresses': ['10.0.0.10'],
+                'egress-subnets': ['10.0.0.0/24']}
+            return network_data
+
+    filename = inspect.getfile(charm_class)
+    charm_dir = pathlib.Path(filename).parents[1]
+
+    if not charm_metadata:
+        metadata_file = f'{charm_dir}/metadata.yaml'
+        if os.path.isfile(metadata_file):
+            with open(metadata_file) as f:
+                charm_metadata = f.read()
+    if not charm_config:
+        config_file = f'{charm_dir}/config.yaml'
+        if os.path.isfile(config_file):
+            with open(config_file) as f:
+                charm_config = yaml.safe_load(f.read())['options']
+
     harness = Harness(
         charm_class,
-        meta=charm_meta,
+        meta=charm_metadata,
     )
     harness._backend = _OSTestingModelBackend(
         harness._unit_name, harness._meta)
@@ -204,5 +235,6 @@ def get_harness(charm_class, charm_meta, container_calls):
         harness._charm_dir,
         harness._meta,
         harness._model)
-    # END Workaround
+    if charm_config:
+        harness.update_config(charm_config)
     return harness
