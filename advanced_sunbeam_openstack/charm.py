@@ -220,13 +220,22 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """Determine whether the service has been boostrapped."""
         return self._state.bootstrapped
 
-    def leader_set(self, key: str, value: str) -> None:
-        """Set data on the peer relation."""
-        self.peers.set_app_data(key, value)
+    def leader_set(self, settings=None, **kwargs):
+        """Juju set data in peer data bag"""
+        settings = settings or {}
+        settings.update(kwargs)
+        self.peers.set_app_data(
+            settings=settings)
 
     def leader_get(self, key: str) -> str:
-        """Retrieeve data from the peer relation."""
+        """Retrieve data from the peer relation."""
         return self.peers.get_app_data(key)
+
+    def set_leader_ready(self):
+        self.peers.set_leader_ready()
+
+    def is_leader_ready(self):
+        return self.peers.is_leader_ready()
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):

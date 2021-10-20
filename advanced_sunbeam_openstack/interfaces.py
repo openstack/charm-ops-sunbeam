@@ -70,11 +70,12 @@ class OperatorPeers(Object):
         logging.info('Peers on_changed')
         self.on.peers_data_changed.emit()
 
-    def set_app_data(self, key, value) -> None:
+    def set_app_data(self, settings) -> None:
         """
 
         """
-        self._app_data_bag[key] = value
+        for k, v in settings.items():
+            self._app_data_bag[k] = v
 
     def get_app_data(self, key) -> None:
         """

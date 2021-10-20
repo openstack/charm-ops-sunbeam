@@ -108,7 +108,7 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             'my-service/1')
         self.harness.set_leader()
         self.set_pebble_ready()
-        self.harness.charm.leader_set("foo", "bar")
+        self.harness.charm.leader_set({'foo': 'bar'})
         test_utils.add_api_relations(self.harness)
         expect_entries = [
             '/bin/wsgi_admin',
@@ -163,3 +163,36 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.assertEqual(
             contexts.options.debug,
             'true')
+
+    def test_peer_leader_db(self):
+        rel_id = self.harness.add_relation('peers', 'my-service')
+        self.harness.add_relation_unit(
+            rel_id,
+            'my-service/1')
+        self.harness.set_leader()
+        self.harness.charm.leader_set({'ready': 'true'})
+        self.harness.charm.leader_set({'foo': 'bar'})
+        self.harness.charm.leader_set(ginger='biscuit')
+        rel_data = self.harness.get_relation_data(rel_id, 'my-service')
+        self.assertEqual(
+            rel_data,
+            {'ready': 'true', 'foo': 'bar', 'ginger': 'biscuit'})
+        self.assertEqual(
+            self.harness.charm.leader_get('ready'),
+            'true')
+        self.assertEqual(
+            self.harness.charm.leader_get('foo'),
+            'bar')
+        self.assertEqual(
+            self.harness.charm.leader_get('ginger'),
+            'biscuit')
+
+    def test_peer_leader_ready(self):
+        rel_id = self.harness.add_relation('peers', 'my-service')
+        self.harness.add_relation_unit(
+            rel_id,
+            'my-service/1')
+        self.harness.set_leader()
+        self.assertFalse(self.harness.charm.is_leader_ready())
+        self.harness.charm.set_leader_ready()
+        self.assertTrue(self.harness.charm.is_leader_ready())
