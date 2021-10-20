@@ -16,6 +16,7 @@
 
 """
 
+import json
 import logging
 from collections.abc import Callable
 from typing import Tuple
@@ -308,6 +309,8 @@ class IdentityServiceRequiresHandler(RelationHandler):
 
 class BasePeerHandler(RelationHandler):
 
+    LEADER_READY_KEY = 'leader_ready'
+
     def setup_event_handler(self):
         """Configure event handlers for peer relation."""
         logger.debug("Setting up peer event handler")
@@ -333,8 +336,24 @@ class BasePeerHandler(RelationHandler):
         except AttributeError:
             return {}
 
-    def set_app_data(self, key, value):
-        self.interface.set_app_data(key, value)
+    def set_app_data(self, settings):
+        self.interface.set_app_data(settings)
 
     def get_app_data(self, key):
         return self.interface.get_app_data(key)
+
+    def leader_set(self, settings=None, **kwargs):
+        """Juju leader set value(s)"""
+        settings = settings or {}
+        settings.update(kwargs)
+        self.set_app_data(settings)
+
+    def set_leader_ready(self):
+        self.set_app_data({self.LEADER_READY_KEY: json.dumps(True)})
+
+    def is_leader_ready(self):
+        ready = self.get_app_data(self.LEADER_READY_KEY)
+        if ready is None:
+            return False
+        else:
+            return json.loads(ready)
