@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-
-# Copyright 2020 Canonical Ltd.
+# Copyright 2021 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Test aso."""
 
 import json
-from mock import patch
 import sys
 
 sys.path.append('lib')  # noqa
@@ -28,11 +26,13 @@ from . import test_charms
 
 
 class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
+    """Test for the OSBaseOperatorCharm class."""
 
     PATCHES = [
     ]
 
-    def setUp(self):
+    def setUp(self) -> None:
+        """Charm test class setup."""
         self.container_calls = {
             'push': {},
             'pull': [],
@@ -46,43 +46,45 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
         self.harness.begin()
         self.addCleanup(self.harness.cleanup)
 
-    def set_pebble_ready(self):
+    def set_pebble_ready(self) -> None:
+        """Set pebble ready event."""
         container = self.harness.model.unit.get_container("my-service")
         # Emit the PebbleReadyEvent
         self.harness.charm.on.my_service_pebble_ready.emit(container)
 
-    def test_pebble_ready_handler(self):
+    def test_pebble_ready_handler(self) -> None:
+        """Test is raised and observed."""
         self.assertEqual(self.harness.charm.seen_events, [])
         self.set_pebble_ready()
         self.assertEqual(self.harness.charm.seen_events, ['PebbleReadyEvent'])
 
-    def test_write_config(self):
+    def test_write_config(self) -> None:
+        """Test writing config when charm is ready."""
         self.set_pebble_ready()
         self.assertEqual(
             self.container_calls['push'],
             {})
 
-    def test_handler_prefix(self):
-        self.assertEqual(
-            self.harness.charm.handler_prefix,
-            'my_service')
-
-    def test_container_names(self):
+    def test_container_names(self) -> None:
+        """Test container name list is correct."""
         self.assertEqual(
             self.harness.charm.container_names,
             ['my-service'])
 
-    def test_relation_handlers_ready(self):
+    def test_relation_handlers_ready(self) -> None:
+        """Test relation handlers are ready."""
         self.assertTrue(
             self.harness.charm.relation_handlers_ready())
 
 
 class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
+    """Test for the OSBaseOperatorAPICharm class."""
 
     PATCHES = [
     ]
 
-    def setUp(self):
+    def setUp(self) -> None:
+        """Charm test class setup."""
         self.container_calls = {
             'push': {},
             'pull': [],
@@ -98,10 +100,12 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.harness.update_config(test_charms.CHARM_CONFIG)
         self.harness.begin()
 
-    def set_pebble_ready(self):
+    def set_pebble_ready(self) -> None:
+        """Set pebble ready event."""
         self.harness.container_pebble_ready('my-service')
 
-    def test_write_config(self):
+    def test_write_config(self) -> None:
+        """Test when charm is ready configs are written correctly."""
         self.harness.set_leader()
         rel_id = self.harness.add_relation('peers', 'my-service')
         self.harness.add_relation_unit(
@@ -135,8 +139,8 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
                 'source': expect_string,
                 'user': 'root'})
 
-    @patch('advanced_sunbeam_openstack.templating.sidecar_config_render')
-    def test__on_database_changed(self, _renderer):
+    def test__on_database_changed(self) -> None:
+        """Test database is requested."""
         rel_id = self.harness.add_relation('peers', 'my-service')
         self.harness.add_relation_unit(
             rel_id,
@@ -149,10 +153,10 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             db_rel_id,
             'my-service')
         requested_db = json.loads(rel_data['databases'])[0]
-        # self.assertRegex(requested_db, r'^db_.*my_service$')
         self.assertEqual(requested_db, 'my_service')
 
-    def test_contexts(self):
+    def test_contexts(self) -> None:
+        """Test contexts are correctly populated."""
         rel_id = self.harness.add_relation('peers', 'my-service')
         self.harness.add_relation_unit(
             rel_id,
@@ -172,7 +176,8 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             contexts.options.debug,
             'true')
 
-    def test_peer_leader_db(self):
+    def test_peer_leader_db(self) -> None:
+        """Test interacting with peer app db."""
         rel_id = self.harness.add_relation('peers', 'my-service')
         self.harness.add_relation_unit(
             rel_id,
@@ -195,7 +200,8 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             self.harness.charm.leader_get('ginger'),
             'biscuit')
 
-    def test_peer_leader_ready(self):
+    def test_peer_leader_ready(self) -> None:
+        """Test peer leader ready methods."""
         rel_id = self.harness.add_relation('peers', 'my-service')
         self.harness.add_relation_unit(
             rel_id,

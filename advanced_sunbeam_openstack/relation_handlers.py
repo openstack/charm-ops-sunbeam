@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Base classes for defining a charm using the Operator framework.
-
-"""
+"""Base classes for defining a charm using the Operator framework."""
 
 import json
 import logging
-from collections.abc import Callable
-from typing import Tuple
+from typing import Callable, List, Tuple
 
 import ops.charm
+import ops.framework
 
 import charms.nginx_ingress_integrator.v0.ingress as ingress
 import charms.sunbeam_mysql_k8s.v0.mysql as mysql
@@ -33,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class RelationHandler(ops.charm.Object):
-    """Base handler class for relations
+    """Base handler class for relations.
 
     A relation handler is used to manage a charms interaction with a relation
     interface. This includes:
@@ -46,8 +44,13 @@ class RelationHandler(ops.charm.Object):
        recieved and sent on an interface.
     """
 
-    def __init__(self, charm: ops.charm.CharmBase,
-                 relation_name: str, callback_f: Callable):
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable,
+    ) -> None:
+        """Run constructor."""
         super().__init__(charm, None)
         self.charm = charm
         self.relation_name = relation_name
@@ -63,21 +66,25 @@ class RelationHandler(ops.charm.Object):
         raise NotImplementedError
 
     def get_interface(self) -> Tuple[ops.charm.Object, str]:
-        """Returns the interface that this handler encapsulates.
+        """Return the interface that this handler encapsulates.
 
         This is a combination of the interface object and the
         name of the relation its wired into.
         """
         return self.interface, self.relation_name
 
-    def interface_properties(self):
+    def interface_properties(self) -> dict:
+        """Extract properties of the interface."""
         property_names = [
-            p for p in dir(self.interface) if isinstance(
-                getattr(type(self.interface), p, None), property)]
+            p
+            for p in dir(self.interface)
+            if isinstance(getattr(type(self.interface), p, None), property)
+        ]
         properties = {
             p: getattr(self.interface, p)
             for p in property_names
-            if not p.startswith('_') and p not in ['model']}
+            if not p.startswith("_") and p not in ["model"]
+        }
         return properties
 
     @property
@@ -91,23 +98,25 @@ class RelationHandler(ops.charm.Object):
 
 
 class IngressHandler(RelationHandler):
-    """Handler for Ingress relations"""
+    """Handler for Ingress relations."""
 
-    def __init__(self, charm: ops.charm.CharmBase,
-                 relation_name: str,
-                 service_name: str,
-                 default_public_ingress_port: int,
-                 callback_f: Callable):
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        service_name: str,
+        default_public_ingress_port: int,
+        callback_f: Callable,
+    ) -> None:
+        """Run constructor."""
         self.default_public_ingress_port = default_public_ingress_port
         self.service_name = service_name
         super().__init__(charm, relation_name, callback_f)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Ingress relation."""
-        logger.debug('Setting up ingress event handler')
-        interface = ingress.IngressRequires(
-            self.charm,
-            self.ingress_config)
+        logger.debug("Setting up ingress event handler")
+        interface = ingress.IngressRequires(self.charm, self.ingress_config)
         return interface
 
     @property
@@ -116,75 +125,78 @@ class IngressHandler(RelationHandler):
         # Most charms probably won't (or shouldn't) expose service-port
         # but use it if its there.
         port = self.model.config.get(
-            'service-port',
-            self.default_public_ingress_port)
+            "service-port", self.default_public_ingress_port
+        )
         svc_hostname = self.model.config.get(
-            'os-public-hostname',
-            self.service_name)
+            "os-public-hostname", self.service_name
+        )
         return {
-            'service-hostname': svc_hostname,
-            'service-name': self.charm.app.name,
-            'service-port': port}
+            "service-hostname": svc_hostname,
+            "service-name": self.charm.app.name,
+            "service-port": port,
+        }
 
     @property
     def ready(self) -> bool:
+        """Whether the handler is ready for use."""
         # Nothing to wait for
         return True
 
-    def context(self):
+    def context(self) -> dict:
+        """Context containing ingress data."""
         return {}
 
 
 class DBHandler(RelationHandler):
-    """Handler for DB relations"""
+    """Handler for DB relations."""
 
     def __init__(
         self,
         charm: ops.charm.CharmBase,
         relation_name: str,
-        callback_f,
-        databases=None
-    ):
+        callback_f: Callable,
+        databases: List[str] = None,
+    ) -> None:
+        """Run constructor."""
         self.databases = databases
         super().__init__(charm, relation_name, callback_f)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for a MySQL relation."""
-        logger.debug('Setting up DB event handler')
+        logger.debug("Setting up DB event handler")
         db = mysql.MySQLConsumer(
-            self.charm,
-            self.relation_name,
-            databases=self.databases)
-        _rname = self.relation_name.replace('-', '_')
+            self.charm, self.relation_name, databases=self.databases
+        )
+        _rname = self.relation_name.replace("-", "_")
         db_relation_event = getattr(
-            self.charm.on,
-            f'{_rname}_relation_changed')
-        self.framework.observe(db_relation_event,
-                               self._on_database_changed)
+            self.charm.on, f"{_rname}_relation_changed"
+        )
+        self.framework.observe(db_relation_event, self._on_database_changed)
         return db
 
-    def _on_database_changed(self, event) -> None:
-        """Handles database change events."""
+    def _on_database_changed(self, event: ops.framework.EventBase) -> None:
+        """Handle database change events."""
         databases = self.interface.databases()
-        logger.info(f'Received databases: {databases}')
+        logger.info(f"Received databases: {databases}")
 
         if not databases:
             return
         credentials = self.interface.credentials()
         # XXX Lets not log the credentials
-        logger.info(f'Received credentials: {credentials}')
+        logger.info(f"Received credentials: {credentials}")
         self.callback_f(event)
 
     @property
     def ready(self) -> bool:
-        """Handler ready for use."""
+        """Whether the handler is ready for use."""
         try:
             # Nothing to wait for
             return bool(self.interface.databases())
         except AttributeError:
             return False
 
-    def context(self):
+    def context(self) -> dict:
+        """Context containing database connection data."""
         try:
             databases = self.interface.databases()
         except AttributeError:
@@ -192,15 +204,17 @@ class DBHandler(RelationHandler):
         if not databases:
             return {}
         ctxt = {
-            'database': self.interface.databases()[0],
-            'database_host': self.interface.credentials().get('address'),
-            'database_password': self.interface.credentials().get('password'),
-            'database_user': self.interface.credentials().get('username'),
-            'database_type': 'mysql+pymysql'}
+            "database": self.interface.databases()[0],
+            "database_host": self.interface.credentials().get("address"),
+            "database_password": self.interface.credentials().get("password"),
+            "database_user": self.interface.credentials().get("username"),
+            "database_type": "mysql+pymysql",
+        }
         return ctxt
 
 
 class AMQPHandler(RelationHandler):
+    """Handler for managing a amqp relation."""
 
     DEFAULT_PORT = "5672"
 
@@ -208,15 +222,16 @@ class AMQPHandler(RelationHandler):
         self,
         charm: ops.charm.CharmBase,
         relation_name: str,
-        callback_f,
+        callback_f: Callable,
         username: str,
         vhost: int,
-    ):
+    ) -> None:
+        """Run constructor."""
         self.username = username
         self.vhost = vhost
         super().__init__(charm, relation_name, callback_f)
 
-    def setup_event_handler(self):
+    def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an AMQP relation."""
         logger.debug("Setting up AMQP event handler")
         amqp = sunbeam_amqp.AMQPRequires(
@@ -225,21 +240,22 @@ class AMQPHandler(RelationHandler):
         self.framework.observe(amqp.on.ready, self._on_amqp_ready)
         return amqp
 
-    def _on_amqp_ready(self, event) -> None:
-        """Handles AMQP change events."""
+    def _on_amqp_ready(self, event: ops.framework.EventBase) -> None:
+        """Handle AMQP change events."""
         # Ready is only emitted when the interface considers
         # that the relation is complete (indicated by a password)
         self.callback_f(event)
 
     @property
     def ready(self) -> bool:
-        """Handler ready for use."""
+        """Whether handler is ready for use."""
         try:
             return bool(self.interface.password)
         except AttributeError:
             return False
 
-    def context(self):
+    def context(self) -> dict:
+        """Context containing AMQP connection data."""
         try:
             hosts = self.interface.hostnames
         except AttributeError:
@@ -247,60 +263,65 @@ class AMQPHandler(RelationHandler):
         if not hosts:
             return {}
         ctxt = super().context()
-        ctxt['hostnames'] = list(set(ctxt['hostnames']))
-        ctxt['hosts'] = ','.join(ctxt['hostnames'])
-        ctxt['port'] = ctxt.get('ssl_port') or self.DEFAULT_PORT
-        transport_url_hosts = ','.join([
-            "{}:{}@{}:{}".format(self.username,
-                                 ctxt['password'],
-                                 host_,  # TODO deal with IPv6
-                                 ctxt['port'])
-            for host_ in ctxt['hostnames']
-        ])
+        ctxt["hostnames"] = list(set(ctxt["hostnames"]))
+        ctxt["hosts"] = ",".join(ctxt["hostnames"])
+        ctxt["port"] = ctxt.get("ssl_port") or self.DEFAULT_PORT
+        transport_url_hosts = ",".join(
+            [
+                "{}:{}@{}:{}".format(
+                    self.username,
+                    ctxt["password"],
+                    host_,  # TODO deal with IPv6
+                    ctxt["port"],
+                )
+                for host_ in ctxt["hostnames"]
+            ]
+        )
         transport_url = "rabbit://{}/{}".format(
-            transport_url_hosts,
-            self.vhost)
-        ctxt['transport_url'] = transport_url
+            transport_url_hosts, self.vhost
+        )
+        ctxt["transport_url"] = transport_url
         return ctxt
 
 
 class IdentityServiceRequiresHandler(RelationHandler):
+    """Handler for managing a identity-service relation."""
 
     def __init__(
         self,
         charm: ops.charm.CharmBase,
         relation_name: str,
-        callback_f,
+        callback_f: Callable,
         service_endpoints: dict,
         region: str,
-    ):
+    ) -> None:
+        """Ron constructor."""
         self.service_endpoints = service_endpoints
         self.region = region
         super().__init__(charm, relation_name, callback_f)
 
-    def setup_event_handler(self):
+    def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Identity service relation."""
         logger.debug("Setting up Identity Service event handler")
         id_svc = sunbeam_id_svc.IdentityServiceRequires(
-            self.charm,
-            self.relation_name,
-            self.service_endpoints,
-            self.region
+            self.charm, self.relation_name, self.service_endpoints, self.region
         )
         self.framework.observe(
-            id_svc.on.ready,
-            self._on_identity_service_ready)
+            id_svc.on.ready, self._on_identity_service_ready
+        )
         return id_svc
 
-    def _on_identity_service_ready(self, event) -> None:
-        """Handles AMQP change events."""
+    def _on_identity_service_ready(
+        self, event: ops.framework.EventBase
+    ) -> None:
+        """Handle AMQP change events."""
         # Ready is only emitted when the interface considers
         # that the relation is complete (indicated by a password)
         self.callback_f(event)
 
     @property
     def ready(self) -> bool:
-        """Handler ready for use."""
+        """Whether handler is ready for use."""
         try:
             return bool(self.interface.service_password)
         except AttributeError:
@@ -308,10 +329,11 @@ class IdentityServiceRequiresHandler(RelationHandler):
 
 
 class BasePeerHandler(RelationHandler):
+    """Base handler for managing a peers relation."""
 
-    LEADER_READY_KEY = 'leader_ready'
+    LEADER_READY_KEY = "leader_ready"
 
-    def setup_event_handler(self):
+    def setup_event_handler(self) -> None:
         """Configure event handlers for peer relation."""
         logger.debug("Setting up peer event handler")
         peer_int = sunbeam_interfaces.OperatorPeers(
@@ -319,39 +341,50 @@ class BasePeerHandler(RelationHandler):
             self.relation_name,
         )
         self.framework.observe(
-            peer_int.on.peers_data_changed,
-            self._on_peers_data_changed)
+            peer_int.on.peers_data_changed, self._on_peers_data_changed
+        )
         return peer_int
 
-    def _on_peers_data_changed(self, event) -> None:
+    def _on_peers_data_changed(self, event: ops.framework.EventBase) -> None:
+        """Process peer data changed event."""
         self.callback_f(event)
 
     @property
     def ready(self) -> bool:
+        """Whether the handler is complete."""
         return True
 
-    def context(self):
+    def context(self) -> dict:
+        """Return all app data set on the peer relation."""
         try:
             return self.interface.get_all_app_data()
         except AttributeError:
             return {}
 
-    def set_app_data(self, settings):
+    def set_app_data(self, settings: dict) -> None:
+        """Store data in peer app db."""
         self.interface.set_app_data(settings)
 
-    def get_app_data(self, key):
+    def get_app_data(self, key: str) -> str:
+        """Retrieve data from the peer relation."""
         return self.interface.get_app_data(key)
 
-    def leader_set(self, settings=None, **kwargs):
-        """Juju leader set value(s)"""
+    def leader_get(self, key: str) -> str:
+        """Retrieve data from the peer relation."""
+        return self.peers.get_app_data(key)
+
+    def leader_set(self, settings: dict, **kwargs) -> None:
+        """Store data in peer app db."""
         settings = settings or {}
         settings.update(kwargs)
         self.set_app_data(settings)
 
-    def set_leader_ready(self):
+    def set_leader_ready(self) -> None:
+        """Tell peers the leader is ready."""
         self.set_app_data({self.LEADER_READY_KEY: json.dumps(True)})
 
-    def is_leader_ready(self):
+    def is_leader_ready(self) -> bool:
+        """Whether the leader has announced it is ready."""
         ready = self.get_app_data(self.LEADER_READY_KEY)
         if ready is None:
             return False

@@ -12,22 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Module for rendering templates inside containers."""
+
 import logging
 import os
+from typing import List, TYPE_CHECKING
 
-from collections import defaultdict
+if TYPE_CHECKING:
+    import advanced_sunbeam_openstack.core as sunbeam_core
+    import ops.model
 
-from charmhelpers.contrib.openstack.templating import (
-    OSConfigException,
-    OSConfigRenderer,
-    get_loader)
+from charmhelpers.contrib.openstack.templating import get_loader
 import jinja2
-# from jinja2 import FileSystemLoader, ChoiceLoader, Environment, exceptions
 
 log = logging.getLogger(__name__)
 
 
-def get_container(containers, name):
+def get_container(
+    containers: List['ops.model.Container'], name: str
+) -> 'ops.model.Container':
+    """Search for container with given name inlist of containers."""
     container = None
     for c in containers:
         if c.name == name:
@@ -35,113 +39,31 @@ def get_container(containers, name):
     return container
 
 
-def sidecar_config_render(containers, container_configs, template_dir,
-                          openstack_release, adapters):
+def sidecar_config_render(
+    containers: List['ops.model.Container'],
+    container_configs: List['sunbeam_core.ContainerConfigFile'],
+    template_dir: str,
+    openstack_release: str,
+    context: 'sunbeam_core.OPSCharmContexts',
+) -> None:
+    """Render templates inside containers."""
     loader = get_loader(template_dir, openstack_release)
     _tmpl_env = jinja2.Environment(loader=loader)
     for config in container_configs:
         for container_name in config.container_names:
             try:
                 template = _tmpl_env.get_template(
-                    os.path.basename(config.path) + '.j2')
+                    os.path.basename(config.path) + ".j2"
+                )
             except jinja2.exceptions.TemplateNotFound:
                 template = _tmpl_env.get_template(
-                    os.path.basename(config.path))
+                    os.path.basename(config.path)
+                )
             container = get_container(containers, container_name)
-            contents = template.render(adapters)
-            kwargs = {
-                'user': config.user,
-                'group': config.group}
+            contents = template.render(context)
+            kwargs = {"user": config.user, "group": config.group}
             container.push(config.path, contents, **kwargs)
-            log.debug(f'Wrote template {config.path} in container '
-                      f'{container.name}.')
-
-
-class SidecarConfigRenderer(OSConfigRenderer):
-
-    """
-    This class provides a common templating system to be used by OpenStack
-    sidecar charms.
-    """
-    def __init__(self, templates_dir, openstack_release):
-        super(SidecarConfigRenderer, self).__init__(templates_dir,
-                                                    openstack_release)
-
-
-class _SidecarConfigRenderer(OSConfigRenderer):
-
-    """
-    This class provides a common templating system to be used by OpenStack
-    sidecar charms.
-    """
-    def __init__(self, templates_dir, openstack_release):
-        super(SidecarConfigRenderer, self).__init__(templates_dir,
-                                                    openstack_release)
-        self.config_to_containers = defaultdict(set)
-        self.owner_info = defaultdict(set)
-
-    def _get_template(self, template):
-        """
-
-        """
-        self._get_tmpl_env()
-        if not template.endswith('.j2'):
-            template += '.j2'
-        template = self._tmpl_env.get_template(template)
-        log.debug(f'Loaded template from {template.filename}')
-        return template
-
-    def register(self, config_file, contexts, config_template=None,
-                 containers=None, user=None, group=None):
-        """
-
-        """
-        # NOTE(wolsen): Intentionally overriding base class to raise an error
-        #  if this is accidentally used instead.
-        if containers is None:
-            raise ValueError('One or more containers must be provided')
-
-        super().register(config_file, contexts, config_template)
-
-        # Register user/group info. There's a better way to do this for sure
-        if user or group:
-            self.owner_info[config_file] = (user, group)
-
-        for container in containers:
-            self.config_to_containers[config_file].add(container)
-            log.debug(f'Registered config file "{config_file}" for container '
-                      f'{container}')
-
-    def write(self, config_file, container):
-        """
-
-        """
-        containers = self.config_to_containers.get(config_file)
-        if not containers or container.name not in containers:
-            log.error(f'Config file {config_file} not registered for '
-                      f'container {container.name}')
-            raise OSConfigException
-
-        contents = self.render(config_file)
-        owner_info = self.owner_info.get(config_file)
-        kwargs = {}
-        log.debug(f'Got owner_info of {owner_info}')
-        if owner_info:
-            user, group = owner_info
-            kwargs['user'] = user
-            kwargs['group'] = group
-        container.push(config_file, contents, **kwargs)
-
-        log.debug(f'Wrote template {config_file} in container '
-                  f'{container.name}.')
-
-    def write_all(self, container=None):
-        for config_file, containers in self.config_to_containers.items():
-            if container:
-                if container.name not in containers:
-                    continue
-
-                self.write(config_file, container)
-            else:
-                for c in containers:
-                    self.write(config_file, c)
+            log.debug(
+                f"Wrote template {config.path} in container "
+                f"{container.name}."
+            )
