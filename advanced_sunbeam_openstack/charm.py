@@ -51,59 +51,66 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     _state = ops.framework.StoredState()
 
-    def __init__(self, framework):
+    def __init__(self, framework: ops.framework.Framework) -> None:
+        """Run constructor."""
         super().__init__(framework)
         self._state.set_default(bootstrapped=False)
         self.relation_handlers = self.get_relation_handlers()
         self.pebble_handlers = self.get_pebble_handlers()
-        self.framework.observe(self.on.config_changed,
-                               self._on_config_changed)
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
-    def can_add_handler(self, relation_name, handlers):
+    def can_add_handler(
+        self,
+        relation_name: str,
+        handlers: List[sunbeam_rhandlers.RelationHandler],
+    ) -> bool:
+        """Whether a handler for the given relation can be added."""
         if relation_name not in self.meta.relations.keys():
             logging.debug(
                 f"Cannot add handler for relation {relation_name}, relation "
-                "not present in charm metadata")
+                "not present in charm metadata"
+            )
             return False
         if relation_name in [h.relation_name for h in handlers]:
             logging.debug(
                 f"Cannot add handler for relation {relation_name}, handler "
-                "already present")
+                "already present"
+            )
             return False
         return True
 
-    def get_relation_handlers(self, handlers=None) -> List[
-            sunbeam_rhandlers.RelationHandler]:
+    def get_relation_handlers(
+        self, handlers: List[sunbeam_rhandlers.RelationHandler] = None
+    ) -> List[sunbeam_rhandlers.RelationHandler]:
         """Relation handlers for the service."""
         handlers = handlers or []
-        if self.can_add_handler('amqp', handlers):
+        if self.can_add_handler("amqp", handlers):
             self.amqp = sunbeam_rhandlers.AMQPHandler(
                 self,
-                'amqp',
+                "amqp",
                 self.configure_charm,
-                self.config.get('rabbit-user') or self.service_name,
-                self.config.get('rabbit-vhost') or 'openstack')
+                self.config.get("rabbit-user") or self.service_name,
+                self.config.get("rabbit-vhost") or "openstack",
+            )
             handlers.append(self.amqp)
-        if self.can_add_handler('shared-db', handlers):
+        if self.can_add_handler("shared-db", handlers):
             self.db = sunbeam_rhandlers.DBHandler(
-                self,
-                'shared-db',
-                self.configure_charm,
-                self.databases)
+                self, "shared-db", self.configure_charm, self.databases
+            )
             handlers.append(self.db)
-        if self.can_add_handler('ingress', handlers):
+        if self.can_add_handler("ingress", handlers):
             self.ingress = sunbeam_rhandlers.IngressHandler(
                 self,
-                'ingress',
+                "ingress",
                 self.service_name,
                 self.default_public_ingress_port,
-                self.configure_charm)
+                self.configure_charm,
+            )
             handlers.append(self.ingress)
-        if self.can_add_handler('peers', handlers):
+        if self.can_add_handler("peers", handlers):
             self.peers = sunbeam_rhandlers.BasePeerHandler(
-                self,
-                'peers',
-                self.configure_charm)
+                self, "peers", self.configure_charm
+            )
             handlers.append(self.peers)
         return handlers
 
@@ -117,12 +124,15 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.container_configs,
                 self.template_dir,
                 self.openstack_release,
-                self.configure_charm)]
+                self.configure_charm,
+            )
+        ]
 
-    def configure_charm(self, event) -> None:
+    def configure_charm(self, event: ops.framework.EventBase) -> None:
         """Catchall handler to cconfigure charm services."""
-        if self.supports_peer_relation and not (self.unit.is_leader() or
-                                                self.is_leader_ready()):
+        if self.supports_peer_relation and not (
+            self.unit.is_leader() or self.is_leader_ready()
+        ):
             logging.debug("Leader not ready")
             return
 
@@ -148,8 +158,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self._state.bootstrapped = True
 
     @property
-    def supports_peer_relation(self):
-        return 'peers' in self.meta.relations.keys()
+    def supports_peer_relation(self) -> bool:
+        """Whether the charm support the peers relation."""
+        return "peers" in self.meta.relations.keys()
 
     @property
     def container_configs(self) -> List[sunbeam_core.ContainerConfigFile]:
@@ -157,26 +168,26 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         return []
 
     @property
-    def config_contexts(self) -> List[
-            sunbeam_config_contexts.CharmConfigContext]:
-        """Configuration adapters for the operator."""
-        return [
-            sunbeam_config_contexts.CharmConfigContext(self, 'options')]
+    def config_contexts(
+        self,
+    ) -> List[sunbeam_config_contexts.CharmConfigContext]:
+        """Return the configuration adapters for the operator."""
+        return [sunbeam_config_contexts.CharmConfigContext(self, "options")]
 
     @property
-    def handler_prefix(self) -> str:
-        """Prefix for handlers??"""
-        return self.service_name.replace('-', '_')
+    def _unused_handler_prefix(self) -> str:
+        """Prefix for handlers."""
+        return self.service_name.replace("-", "_")
 
     @property
-    def container_names(self):
-        """Containers that form part of this service."""
+    def container_names(self) -> List[str]:
+        """Names of Containers that form part of this service."""
         return [self.service_name]
 
     @property
     def template_dir(self) -> str:
         """Directory containing Jinja2 templates."""
-        return 'src/templates'
+        return "src/templates"
 
     @property
     def databases(self) -> List[str]:
@@ -184,9 +195,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
         Defaults to a single database matching the app name.
         """
-        return [self.service_name.replace('-', '_')]
+        return [self.service_name.replace("-", "_")]
 
-    def _on_config_changed(self, event):
+    def _on_config_changed(self, event: ops.framework.EventBase) -> None:
         self.configure_charm(None)
 
     def containers_ready(self) -> bool:
@@ -212,7 +223,8 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             if handler.relation_name not in self.meta.relations.keys():
                 logger.info(
                     f"Dropping handler for relation {handler.relation_name}, "
-                    "relation not present in charm metadata")
+                    "relation not present in charm metadata"
+                )
                 continue
             if handler.ready:
                 ra.add_relation_handler(handler)
@@ -231,74 +243,85 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """Determine whether the service has been boostrapped."""
         return self._state.bootstrapped
 
-    def leader_set(self, settings=None, **kwargs):
-        """Juju set data in peer data bag"""
+    def leader_set(self, settings: dict = None, **kwargs) -> None:
+        """Juju set data in peer data bag."""
         settings = settings or {}
         settings.update(kwargs)
-        self.peers.set_app_data(
-            settings=settings)
+        self.peers.set_app_data(settings=settings)
 
     def leader_get(self, key: str) -> str:
         """Retrieve data from the peer relation."""
         return self.peers.get_app_data(key)
 
-    def set_leader_ready(self):
+    def set_leader_ready(self) -> None:
+        """Tell peers that the leader is ready."""
         self.peers.set_leader_ready()
 
-    def is_leader_ready(self):
+    def is_leader_ready(self) -> bool:
+        """Has the lead unit announced that it is ready."""
         return self.peers.is_leader_ready()
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
-    """Base class for OpenStack API operators"""
+    """Base class for OpenStack API operators."""
 
-    def __init__(self, framework):
+    def __init__(self, framework: ops.framework.Framework) -> None:
+        """Run constructor."""
         super().__init__(framework)
         self._state.set_default(db_ready=False)
 
     @property
-    def service_endpoints(self):
+    def service_endpoints(self) -> List[dict]:
+        """List of endpoints for this service."""
         return []
 
-    def get_relation_handlers(self, handlers=None) -> List[
-            sunbeam_rhandlers.RelationHandler]:
+    def get_relation_handlers(
+        self, handlers: List[sunbeam_rhandlers.RelationHandler] = None
+    ) -> List[sunbeam_rhandlers.RelationHandler]:
         """Relation handlers for the service."""
         handlers = handlers or []
-        if self.can_add_handler('identity-service', handlers):
+        if self.can_add_handler("identity-service", handlers):
             self.id_svc = sunbeam_rhandlers.IdentityServiceRequiresHandler(
                 self,
-                'identity-service',
+                "identity-service",
                 self.configure_charm,
                 self.service_endpoints,
-                self.model.config['region'])
+                self.model.config["region"],
+            )
             handlers.append(self.id_svc)
         handlers = super().get_relation_handlers(handlers)
         return handlers
 
-    def service_url(self, hostname):
-        return f'http://{hostname}:{self.default_public_ingress_port}'
+    def service_url(self, hostname: str) -> str:
+        """Service url for accessing this service via the given hostname."""
+        return f"http://{hostname}:{self.default_public_ingress_port}"
 
     @property
-    def public_url(self):
+    def public_url(self) -> str:
+        """Url for accessing the public endpoint for this service."""
         svc_hostname = self.model.config.get(
-            'os-public-hostname',
-            self.service_name)
+            "os-public-hostname", self.service_name
+        )
         return self.service_url(svc_hostname)
 
     @property
-    def admin_url(self):
+    def admin_url(self) -> str:
+        """Url for accessing the admin endpoint for this service."""
         hostname = self.model.get_binding(
-            'identity-service').network.ingress_address
+            "identity-service"
+        ).network.ingress_address
         return self.service_url(hostname)
 
     @property
-    def internal_url(self):
+    def internal_url(self) -> str:
+        """Url for accessing the internal endpoint for this service."""
         hostname = self.model.get_binding(
-            'identity-service').network.ingress_address
+            "identity-service"
+        ).network.ingress_address
         return self.service_url(hostname)
 
     def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
-        """Pebble handlers for the service"""
+        """Pebble handlers for the service."""
         return [
             sunbeam_chandlers.WSGIPebbleHandler(
                 self,
@@ -308,18 +331,24 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.template_dir,
                 self.openstack_release,
                 self.configure_charm,
-                f'wsgi-{self.service_name}')]
+                f"wsgi-{self.service_name}",
+            )
+        ]
 
     @property
     def container_configs(self) -> List[sunbeam_core.ContainerConfigFile]:
         """Container configuration files for the service."""
         _cconfigs = super().container_configs
-        _cconfigs.extend([
-            sunbeam_core.ContainerConfigFile(
-                [self.wsgi_container_name],
-                self.service_conf,
-                self.service_user,
-                self.service_group)])
+        _cconfigs.extend(
+            [
+                sunbeam_core.ContainerConfigFile(
+                    [self.wsgi_container_name],
+                    self.service_conf,
+                    self.service_user,
+                    self.service_group,
+                )
+            ]
+        )
         return _cconfigs
 
     @property
@@ -335,16 +364,19 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     @property
     def service_conf(self) -> str:
         """Service default configuration file."""
-        return f'/etc/{self.service_name}/{self.service_name}.conf'
+        return f"/etc/{self.service_name}/{self.service_name}.conf"
 
     @property
     def config_contexts(self) -> List[sunbeam_config_contexts.ConfigContext]:
         """Generate list of configuration adapters for the charm."""
         _cadapters = super().config_contexts
-        _cadapters.extend([
-            sunbeam_config_contexts.WSGIWorkerConfigContext(
-                self,
-                'wsgi_config')])
+        _cadapters.extend(
+            [
+                sunbeam_config_contexts.WSGIWorkerConfigContext(
+                    self, "wsgi_config"
+                )
+            ]
+        )
         return _cadapters
 
     @property

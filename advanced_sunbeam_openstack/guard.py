@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Module to handle errors and bailing out of an event/hook."""
+
 import logging
 from contextlib import contextmanager
 
@@ -22,20 +24,27 @@ logger = logging.getLogger(__name__)
 
 
 class GuardException(Exception):
+    """GuardException."""
+
     pass
 
 
 class BlockedException(Exception):
+    """Charm is blocked."""
+
     pass
 
 
 @contextmanager
-def guard(charm: 'CharmBase',
-          section: str,
-          handle_exception: bool = True,
-          log_traceback: bool = True,
-          **__):
+def guard(
+    charm: "CharmBase",
+    section: str,
+    handle_exception: bool = True,
+    log_traceback: bool = True,
+    **__
+) -> None:
     """Context manager to handle errors and bailing out of an event/hook.
+
     The nature of Juju is that all the information may not be available to run
     a set of actions.  This context manager allows a section of code to be
     'guarded' so that it can be bailed at any time.
@@ -54,21 +63,28 @@ def guard(charm: 'CharmBase',
         yield
         logging.info("Completed guarded section fully: '%s'", section)
     except GuardException as e:
-        logger.info("Guarded Section: Early exit from '%s' due to '%s'.",
-                    section, str(e))
+        logger.info(
+            "Guarded Section: Early exit from '%s' due to '%s'.",
+            section,
+            str(e),
+        )
     except BlockedException as e:
         logger.warning(
-            "Charm is blocked in section '%s' due to '%s'", section, str(e))
+            "Charm is blocked in section '%s' due to '%s'", section, str(e)
+        )
         charm.unit.status = BlockedStatus(e.msg)
     except Exception as e:
         # something else went wrong
         if handle_exception:
-            logging.error("Exception raised in secion '%s': %s",
-                          section, str(e))
+            logging.error(
+                "Exception raised in secion '%s': %s", section, str(e)
+            )
             if log_traceback:
                 import traceback
+
                 logging.error(traceback.format_exc())
                 charm.unit.status = BlockedStatus(
-                    "Error in charm (see logs): {}".format(str(e)))
+                    "Error in charm (see logs): {}".format(str(e))
+                )
             return
         raise

@@ -19,40 +19,56 @@ create reusable contexts which translate charm config, deployment state etc.
 These are not specific to a relation.
 """
 
+from __future__ import annotations
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import advanced_sunbeam_openstack.charm
 
 logger = logging.getLogger(__name__)
 
 
-class ConfigContext():
+class ConfigContext:
+    """Base class used for creating a config context."""
 
-    def __init__(self, charm, namespace):
+    def __init__(
+        self,
+        charm: "advanced_sunbeam_openstack.charm.OSBaseOperatorCharm",
+        namespace: str,
+    ) -> None:
+        """Run constructor."""
         self.charm = charm
         self.namespace = namespace
         for k, v in self.context().items():
-            k = k.replace('-', '_')
+            k = k.replace("-", "_")
             setattr(self, k, v)
 
     @property
-    def ready(self):
+    def ready(self) -> bool:
+        """Whether the context has all the data is needs."""
         return True
 
-    def context(self):
+    def context(self) -> dict:
+        """Context used when rendering templates."""
         raise NotImplementedError
 
 
 class CharmConfigContext(ConfigContext):
-    """A context containing all of the charms config options"""
+    """A context containing all of the charms config options."""
 
     def context(self) -> dict:
+        """Charms config options."""
         return self.charm.config
 
 
 class WSGIWorkerConfigContext(ConfigContext):
+    """Configuration context for WSGI configuration."""
 
     def context(self) -> dict:
-        """A context containing WSGI configuration options"""
+        """WSGI configuration options."""
         return {
-            'name': self.charm.service_name,
-            'wsgi_admin_script': self.charm.wsgi_admin_script,
-            'wsgi_public_script': self.charm.wsgi_public_script}
+            "name": self.charm.service_name,
+            "wsgi_admin_script": self.charm.wsgi_admin_script,
+            "wsgi_public_script": self.charm.wsgi_public_script,
+        }
