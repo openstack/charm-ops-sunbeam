@@ -28,6 +28,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# XXX Dulpicating definition in relation handlers
+ERASURE_CODED = "erasure-coded"
+REPLICATED = "replacated"
+
 
 class ConfigContext:
     """Base class used for creating a config context."""
@@ -76,4 +80,45 @@ class WSGIWorkerConfigContext(ConfigContext):
             "wsgi_public_script": self.charm.wsgi_public_script,
             "error_log": f"/var/log/apache2/{log_svc_name}_error.log",
             "custom_log": f"/var/log/apache2/{log_svc_name}_access.log",
+        }
+
+
+class CephConfigurationContext(ConfigContext):
+    """Ceph configuration context."""
+
+    def context(self) -> None:
+        """Ceph configuration context."""
+        config = self.charm.model.config.get
+        ctxt = {}
+        if config("pool-type") and config("pool-type") == "erasure-coded":
+            base_pool_name = config("rbd-pool") or config("rbd-pool-name")
+            if not base_pool_name:
+                base_pool_name = self.charm.app.name
+            ctxt["rbd_default_data_pool"] = base_pool_name
+        return ctxt
+
+
+class CinderCephConfigurationContext(ConfigContext):
+    """Cinder Ceph configuration context."""
+
+    def context(self) -> None:
+        """Cinder Ceph configuration context."""
+        config = self.charm.model.config.get
+        data_pool_name = config('rbd-pool-name') or self.charm.app.name
+        if config('pool-type') == ERASURE_CODED:
+            pool_name = (
+                config('ec-rbd-metadata-pool') or
+                f"{data_pool_name}-metadata"
+            )
+        else:
+            pool_name = data_pool_name
+        backend_name = config('volume-backend-name') or self.charm.app.name
+        # TODO:
+        # secret_uuid needs to be generated and shared for the app
+        return {
+            'cluster_name': self.charm.app.name,
+            'rbd_pool': pool_name,
+            'rbd_user': self.charm.app.name,
+            'backend_name': backend_name,
+            'backend_availability_zone': config('backend-availability-zone'),
         }
