@@ -26,8 +26,12 @@ import charms.sunbeam_mysql_k8s.v0.mysql as mysql
 import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
 import charms.sunbeam_keystone_operator.v0.identity_service as sunbeam_id_svc
 import advanced_sunbeam_openstack.interfaces as sunbeam_interfaces
+import interface_ceph_client.ceph_client as ceph_client
 
 logger = logging.getLogger(__name__)
+
+ERASURE_CODED = "erasure-coded"
+REPLICATED = "replacated"
 
 
 class RelationHandler(ops.charm.Object):
@@ -295,7 +299,7 @@ class IdentityServiceRequiresHandler(RelationHandler):
         service_endpoints: dict,
         region: str,
     ) -> None:
-        """Ron constructor."""
+        """Run constructor."""
         self.service_endpoints = service_endpoints
         self.region = region
         super().__init__(charm, relation_name, callback_f)
@@ -390,3 +394,148 @@ class BasePeerHandler(RelationHandler):
             return False
         else:
             return json.loads(ready)
+
+
+class CephClientHandler(RelationHandler):
+    """Handler for ceph-client interface."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable,
+        allow_ec_overwrites: bool = True,
+        app_name: str = None
+    ) -> None:
+        """Run constructor."""
+        self.allow_ec_overwrites = allow_ec_overwrites
+        self.app_name = app_name
+        super().__init__(charm, relation_name, callback_f)
+
+    def setup_event_handler(self) -> ops.charm.Object:
+        """Configure event handlers for an ceph-client interface."""
+        logger.debug("Setting up ceph-client event handler")
+        ceph = ceph_client.CephClientRequires(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(
+            ceph.on.pools_available, self._on_pools_available
+        )
+        self.framework.observe(
+            ceph.on.broker_available, self.request_pools
+        )
+        return ceph
+
+    def _on_pools_available(self, event: ops.framework.EventBase) -> None:
+        """Handle pools available event."""
+        # Ready is only emitted when the interface considers
+        # that the relation is complete
+        self.callback_f(event)
+
+    def request_pools(self, event: ops.framework.EventBase) -> None:
+        """
+        Request Ceph pool creation when interface broker is ready.
+
+        The default handler will automatically request erasure-coded
+        or replicated pools depending on the configuration of the
+        charm from which the handler is being used.
+
+        To provide charm specific behaviour, subclass the default
+        handler and use the required broker methods on the underlying
+        interface object.
+        """
+        config = self.model.config.get
+        data_pool_name = (
+            config("rbd-pool-name") or
+            config("rbd-pool") or
+            self.charm.app.name
+        )
+        metadata_pool_name = (
+            config("ec-rbd-metadata-pool") or f"{self.charm.app.name}-metadata"
+        )
+        weight = config("ceph-pool-weight")
+        replicas = config("ceph-osd-replication-count")
+        # TODO: add bluestore compression options
+        if config("pool-type") == ERASURE_CODED:
+            # General EC plugin config
+            plugin = config("ec-profile-plugin")
+            technique = config("ec-profile-technique")
+            device_class = config("ec-profile-device-class")
+            bdm_k = config("ec-profile-k")
+            bdm_m = config("ec-profile-m")
+            # LRC plugin config
+            bdm_l = config("ec-profile-locality")
+            crush_locality = config("ec-profile-crush-locality")
+            # SHEC plugin config
+            bdm_c = config("ec-profile-durability-estimator")
+            # CLAY plugin config
+            bdm_d = config("ec-profile-helper-chunks")
+            scalar_mds = config("ec-profile-scalar-mds")
+            # Profile name
+            profile_name = (
+                config("ec-profile-name") or f"{self.charm.app.name}-profile"
+            )
+            # Metadata sizing is approximately 1% of overall data weight
+            # but is in effect driven by the number of rbd's rather than
+            # their size - so it can be very lightweight.
+            metadata_weight = weight * 0.01
+            # Resize data pool weight to accomodate metadata weight
+            weight = weight - metadata_weight
+            # Create erasure profile
+            self.interface.create_erasure_profile(
+                name=profile_name,
+                k=bdm_k,
+                m=bdm_m,
+                lrc_locality=bdm_l,
+                lrc_crush_locality=crush_locality,
+                shec_durability_estimator=bdm_c,
+                clay_helper_chunks=bdm_d,
+                clay_scalar_mds=scalar_mds,
+                device_class=device_class,
+                erasure_type=plugin,
+                erasure_technique=technique,
+            )
+
+            # Create EC data pool
+            self.interface.create_erasure_pool(
+                name=data_pool_name,
+                erasure_profile=profile_name,
+                weight=weight,
+                allow_ec_overwrites=self.allow_ec_overwrites,
+                app_name=self.app_name,
+            )
+            # Create EC metadata pool
+            self.interface.create_replicated_pool(
+                name=metadata_pool_name,
+                replicas=replicas,
+                weight=metadata_weight,
+                app_name=self.app_name,
+            )
+        else:
+            self.interface.create_replicated_pool(
+                name=data_pool_name, replicas=replicas, weight=weight,
+                app_name=self.app_name,
+            )
+
+    @property
+    def ready(self) -> bool:
+        """Whether handler ready for use."""
+        return self.interface.pools_available
+
+    @property
+    def key(self) -> str:
+        """Retrieve the cephx key provided for the application."""
+        return self.interface.get_relation_data().get('key')
+
+    def context(self) -> dict:
+        """Context containing Ceph connection data."""
+        ctxt = super().context()
+        data = self.interface.get_relation_data()
+        ctxt['mon_hosts'] = ",".join(
+            sorted(data.get("mon_hosts"))
+        )
+        ctxt['auth'] = data.get('auth')
+        ctxt['key'] = data.get("key")
+        ctxt['rbd_features'] = None
+        return ctxt
