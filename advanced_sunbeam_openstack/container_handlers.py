@@ -182,6 +182,10 @@ class WSGIPebbleHandler(PebbleHandler):
 
         container.start(self.wsgi_service_name)
 
+    def start_service(self) -> None:
+        """Start the service."""
+        self.start_wsgi()
+
     def get_layer(self) -> dict:
         """Apache WSGI service pebble layer.
 
