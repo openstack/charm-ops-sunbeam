@@ -67,8 +67,13 @@ class WSGIWorkerConfigContext(ConfigContext):
 
     def context(self) -> dict:
         """WSGI configuration options."""
+        log_svc_name = self.charm.service_name.replace('-', '_')
         return {
             "name": self.charm.service_name,
+            "user": self.charm.service_user,
+            "group": self.charm.service_group,
             "wsgi_admin_script": self.charm.wsgi_admin_script,
             "wsgi_public_script": self.charm.wsgi_public_script,
+            "error_log": f"/var/log/apache2/{log_svc_name}_error.log",
+            "custom_log": f"/var/log/apache2/{log_svc_name}_access.log",
         }
