@@ -74,6 +74,7 @@ class WSGIWorkerConfigContext(ConfigContext):
         log_svc_name = self.charm.service_name.replace('-', '_')
         return {
             "name": self.charm.service_name,
+            "public_port": self.charm.default_public_ingress_port,
             "user": self.charm.service_user,
             "group": self.charm.service_group,
             "wsgi_admin_script": self.charm.wsgi_admin_script,
