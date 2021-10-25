@@ -4,3 +4,7 @@ git+https://github.com/canonical/operator@2875e73e#egg=ops
 git+https://opendev.org/openstack/charm-ops-openstack#egg=ops_openstack
 git+https://github.com/openstack-charmers/advanced-sunbeam-openstack#egg=advanced_sunbeam_openstack
 lightkube
+# These are only needeed if the charm relates to ceph
+git+https://github.com/openstack/charm-ops-interface-ceph-client#egg=interface_ceph_client
+# Charmhelpers is only present as interface_ceph_client uses it.
+git+https://github.com/juju/charm-helpers.git#egg=charmhelpers
