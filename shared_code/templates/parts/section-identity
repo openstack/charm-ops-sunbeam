@@ -1,0 +1,11 @@
+[keystone_authtoken]
+{% if identity_service.internal_host -%}
+www_authenticate_uri = {{ identity_service.internal_protocol }}://{{ identity_service.internal_host }}:{{ identity_service.internal_port }}
+auth_url = {{ identity_service.internal_protocol }}://{{ identity_service.internal_host }}:{{ identity_service.internal_port }}
+auth_type = password
+project_domain_name = {{ identity_service.service_domain_name }}
+user_domain_name = {{ identity_service.service_domain_name }}
+project_name = {{ identity_service.service_project_name }}
+username = {{ identity_service.service_user_name }}
+password = {{ identity_service.service_password }}
+{% endif -%}

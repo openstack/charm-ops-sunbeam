@@ -1,0 +1,22 @@
+###############################################################################
+# [ WARNING ]
+# ceph configuration file maintained in aso
+# local changes may be overwritten.
+###############################################################################
+[global]
+{% if ceph.auth -%}
+auth_supported = {{ ceph.auth }}
+mon host = {{ ceph.mon_hosts }}
+{% endif -%}
+keyring = /etc/ceph/$cluster.$name.keyring
+log to syslog = false
+err to syslog = false
+clog to syslog = false
+{% if ceph.rbd_features %}
+rbd default features = {{ ceph.rbd_features }}
+{% endif %}
+
+[client]
+{% if ceph_config.rbd_default_data_pool -%}
+rbd default data pool = {{ ceph_config.rbd_default_data_pool }}
+{% endif %}
