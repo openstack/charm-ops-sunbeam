@@ -1,0 +1,7 @@
+[database]
+{% if shared_db.database_host -%}
+connection = {{ shared_db.database_type }}://{{ shared_db.database_user }}:{{ shared_db.database_password }}@{{ shared_db.database_host }}/{{ shared_db.database }}{% if shared_db.database_ssl_ca %}?ssl_ca={{ shared_db.database_ssl_ca }}{% if shared_db.database_ssl_cert %}&ssl_cert={{ shared_db.database_ssl_cert }}&ssl_key={{ shared_db.database_ssl_key }}{% endif %}{% endif %}
+{% else -%}
+connection = sqlite:////var/lib/cinder/cinder.db
+{% endif -%}
+connection_recycle_time = 200
