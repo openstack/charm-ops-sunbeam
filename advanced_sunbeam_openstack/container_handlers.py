@@ -177,6 +177,11 @@ class WSGIPebbleHandler(PebbleHandler):
             )
             return
         service = container.get_service(self.wsgi_service_name)
+        if self.wsgi_service_name not in container.get_services().keys():
+            container.add_layer(
+                self.service_name,
+                self.get_layer(),
+                combine=True)
         if service.is_running():
             container.stop(self.wsgi_service_name)
 
