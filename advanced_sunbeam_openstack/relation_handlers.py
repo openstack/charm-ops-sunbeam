@@ -207,13 +207,32 @@ class DBHandler(RelationHandler):
             return {}
         if not databases:
             return {}
-        ctxt = {
-            "database": self.interface.databases()[0],
+        ctxt = {}
+        conn_data = {
             "database_host": self.interface.credentials().get("address"),
             "database_password": self.interface.credentials().get("password"),
             "database_user": self.interface.credentials().get("username"),
             "database_type": "mysql+pymysql",
         }
+
+        for db in self.interface.databases():
+            ctxt[db] = {"database": db}
+            ctxt[db].update(conn_data)
+            connection = (
+                "{database_type}://{database_user}:{database_password}"
+                "@{database_host}/{database}")
+            if conn_data.get("database_ssl_ca"):
+                connection = connection + "?ssl_ca={database_ssl_ca}"
+                if conn_data.get("database_ssl_cert"):
+                    connection = connection + (
+                        "&ssl_cert={database_ssl_cert}"
+                        "&ssl_key={database_ssl_key}")
+            ctxt[db]["connection"] = str(connection.format(
+                **ctxt[db]))
+        # XXX Adding below to top level dict should be dropped.
+        ctxt["database"] = self.interface.databases()[0]
+        ctxt.update(conn_data)
+        # /DROP
         return ctxt
 
 
