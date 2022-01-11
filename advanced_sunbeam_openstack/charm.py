@@ -40,6 +40,7 @@ import ops.model
 import advanced_sunbeam_openstack.config_contexts as sunbeam_config_contexts
 import advanced_sunbeam_openstack.container_handlers as sunbeam_chandlers
 import advanced_sunbeam_openstack.core as sunbeam_core
+import advanced_sunbeam_openstack.cprocess as sunbeam_cprocess
 import advanced_sunbeam_openstack.relation_handlers as sunbeam_rhandlers
 
 
@@ -231,14 +232,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         ra.add_config_contexts(self.config_contexts)
         return ra
 
-    def _do_bootstrap(self) -> None:
-        """Bootstrap the service ready for operation.
-
-        This method should be overridden as part of a concrete
-        charm implementation
-        """
-        pass
-
     def bootstrapped(self) -> bool:
         """Determine whether the service has been boostrapped."""
         return self._state.bootstrapped
@@ -260,6 +253,35 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
     def is_leader_ready(self) -> bool:
         """Has the lead unit announced that it is ready."""
         return self.peers.is_leader_ready()
+
+    def run_db_sync(self) -> None:
+        """Run DB sync to init DB.
+
+        :raises: sunbeam_cprocess.ContainerProcessError
+        """
+        if self.db_sync_cmds:
+            logger.info("Syncing database...")
+            container = self.unit.get_container(self.wsgi_container_name)
+            for cmd in self.db_sync_cmds:
+                logging.debug(f'Running sync: \n{cmd}')
+                out = sunbeam_cprocess.check_output(
+                    container,
+                    cmd,
+                    service_name='db-sync',
+                    timeout=180)
+                logging.debug(f'Output from database sync: \n{out}')
+        else:
+            logger.warn(
+                "Not DB sync ran. Charm does not specify self.db_sync_cmds")
+
+    def _do_bootstrap(self) -> None:
+        """Perform bootstrap."""
+        try:
+            self.run_db_sync()
+        except sunbeam_cprocess.ContainerProcessError:
+            logger.exception('Failed to bootstrap')
+            self._state.bootstrapped = False
+            return
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
