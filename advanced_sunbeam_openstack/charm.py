@@ -276,7 +276,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def _do_bootstrap(self) -> None:
         """Perform bootstrap."""
-        super()._do_bootstrap()
         try:
             self.run_db_sync()
         except sunbeam_cprocess.ContainerProcessError:
