@@ -141,6 +141,32 @@ class PebbleHandler(ops.charm.Object):
         return self._state.service_ready
 
 
+class ServicePebbleHandler(PebbleHandler):
+    """Container handler for containers which manage a service."""
+
+    def init_service(self, context: sunbeam_core.OPSCharmContexts) -> None:
+        """Initialise service ready for use.
+
+        Write configuration files to the container and record
+        that service is ready for us.
+        """
+        self.write_config(context)
+        self.start_service()
+        self._state.service_ready = True
+
+    def start_service(self) -> None:
+        """Start service in container."""
+        container = self.charm.unit.get_container(self.container_name)
+        if not container:
+            logger.debug(f'{self.container_name} container is not ready. '
+                         'Cannot start service.')
+            return
+        service = container.get_service(self.service_name)
+        if service.is_running():
+            container.stop(self.service_name)
+        container.start(self.service_name)
+
+
 class WSGIPebbleHandler(PebbleHandler):
     """WSGI oriented handler for a Pebble managed container."""
 
