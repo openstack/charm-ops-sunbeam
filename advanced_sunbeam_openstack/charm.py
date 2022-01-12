@@ -259,7 +259,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
         :raises: sunbeam_cprocess.ContainerProcessError
         """
-        if self.db_sync_cmds:
+        if hasattr(self, 'db_sync_cmds'):
             logger.info("Syncing database...")
             container = self.unit.get_container(self.wsgi_container_name)
             for cmd in self.db_sync_cmds:
