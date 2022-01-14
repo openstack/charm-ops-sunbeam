@@ -380,7 +380,10 @@ class BasePeerHandler(RelationHandler):
     def context(self) -> dict:
         """Return all app data set on the peer relation."""
         try:
-            return self.interface.get_all_app_data()
+            _db = {
+                k.replace('-', '_'): v
+                for k, v in self.interface.get_all_app_data().items()}
+            return _db
         except AttributeError:
             return {}
 

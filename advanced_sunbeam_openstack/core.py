@@ -44,6 +44,10 @@ class OPSCharmContexts:
         obj_name = "".join([w.capitalize() for w in relation_name.split("-")])
         obj = collections.namedtuple(obj_name, ctxt.keys())(*ctxt.values())
         setattr(self, _ns, obj)
+        # Add special sobriquet for peers.
+        if _ns == "peers":
+            self.namespaces.append("leader_db")
+            setattr(self, "leader_db", obj)
 
     def add_config_contexts(
         self, config_adapters: List["ConfigContext"]
