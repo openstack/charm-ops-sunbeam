@@ -21,12 +21,7 @@ from typing import Callable, List, Tuple
 import ops.charm
 import ops.framework
 
-import charms.nginx_ingress_integrator.v0.ingress as ingress
-import charms.sunbeam_mysql_k8s.v0.mysql as mysql
-import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
-import charms.sunbeam_keystone_operator.v0.identity_service as sunbeam_id_svc
 import advanced_sunbeam_openstack.interfaces as sunbeam_interfaces
-import interface_ceph_client.ceph_client as ceph_client
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +115,9 @@ class IngressHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Ingress relation."""
         logger.debug("Setting up ingress event handler")
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        import charms.nginx_ingress_integrator.v0.ingress as ingress
         interface = ingress.IngressRequires(self.charm, self.ingress_config)
         return interface
 
@@ -168,6 +166,9 @@ class DBHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for a MySQL relation."""
         logger.debug("Setting up DB event handler")
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        import charms.sunbeam_mysql_k8s.v0.mysql as mysql
         db = mysql.MySQLConsumer(
             self.charm, self.relation_name, databases=self.databases
         )
@@ -257,6 +258,9 @@ class AMQPHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an AMQP relation."""
         logger.debug("Setting up AMQP event handler")
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
         amqp = sunbeam_amqp.AMQPRequires(
             self.charm, self.relation_name, self.username, self.vhost
         )
@@ -326,7 +330,8 @@ class IdentityServiceRequiresHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Identity service relation."""
         logger.debug("Setting up Identity Service event handler")
-        id_svc = sunbeam_id_svc.IdentityServiceRequires(
+        import charms.sunbeam_keystone_operator.v0.identity_service as sun_id
+        id_svc = sun_id.IdentityServiceRequires(
             self.charm, self.relation_name, self.service_endpoints, self.region
         )
         self.framework.observe(
@@ -359,6 +364,8 @@ class BasePeerHandler(RelationHandler):
     def setup_event_handler(self) -> None:
         """Configure event handlers for peer relation."""
         logger.debug("Setting up peer event handler")
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
         peer_int = sunbeam_interfaces.OperatorPeers(
             self.charm,
             self.relation_name,
@@ -437,6 +444,9 @@ class CephClientHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an ceph-client interface."""
         logger.debug("Setting up ceph-client event handler")
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        import interface_ceph_client.ceph_client as ceph_client
         ceph = ceph_client.CephClientRequires(
             self.charm,
             self.relation_name,
