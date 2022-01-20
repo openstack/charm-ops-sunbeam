@@ -30,6 +30,7 @@ configuration to the containers and managing the service running
 in the container.
 """
 
+import ipaddress
 import logging
 from typing import List
 
@@ -113,7 +114,45 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self, "peers", self.configure_charm
             )
             handlers.append(self.peers)
+        if self.can_add_handler("certificates", handlers):
+            self.certs = sunbeam_rhandlers.CertificatesHandler(
+                self, "certificates", self.configure_charm, self.get_sans(),
+            )
+            handlers.append(self.certs)
         return handlers
+
+    def get_sans(self) -> List[str]:
+        """Return Subject Alternate Names to use in cert for service."""
+        str_ips_sans = [str(s) for s in self.get_ip_sans()]
+        return list(set(str_ips_sans + self.get_domain_name_sans()))
+
+    def get_ip_sans(self) -> List[ipaddress.IPv4Address]:
+        """Get IP addresses for service."""
+        ip_sans = []
+        for relation_name in self.meta.relations.keys():
+            for relation in self.framework.model.relations.get(
+                    relation_name, []):
+                binding = self.model.get_binding(relation)
+                ip_sans.append(binding.network.ingress_address)
+                ip_sans.append(binding.network.bind_address)
+
+        for binding_name in ['public']:
+            try:
+                binding = self.model.get_binding(binding_name)
+                ip_sans.append(binding.network.ingress_address)
+                ip_sans.append(binding.network.bind_address)
+            except ops.model.ModelError:
+                logging.debug(f'No binding found for {binding_name}')
+        return ip_sans
+
+    def get_domain_name_sans(self) -> List[str]:
+        """Get Domain names for service."""
+        domain_name_sans = []
+        for binding_config in ['admin', 'internal', 'public']:
+            hostname = self.config.get(f'os-{binding_config}-hostname')
+            if hostname:
+                domain_name_sans.append(hostname)
+        return domain_name_sans
 
     def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
         """Pebble handlers for the operator."""
@@ -143,11 +182,13 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
         for ph in self.pebble_handlers:
             if ph.pebble_ready:
+                logging.debug(f"Running init for {ph.service_name}")
                 ph.init_service(self.contexts())
 
         for ph in self.pebble_handlers:
             if not ph.service_ready:
-                logging.debug("Aborting container service not ready")
+                logging.debug(
+                    f"Aborting container {ph.service_name} service not ready")
                 return
 
         if not self.bootstrapped():
