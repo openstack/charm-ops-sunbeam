@@ -16,6 +16,7 @@
 
 import json
 import logging
+import cryptography.hazmat.primitives.serialization as serialization
 from typing import Callable, List, Tuple
 
 import ops.charm
@@ -570,4 +571,84 @@ class CephClientHandler(RelationHandler):
         ctxt['auth'] = data.get('auth')
         ctxt['key'] = data.get("key")
         ctxt['rbd_features'] = None
+        return ctxt
+
+
+class CertificatesHandler(RelationHandler):
+    """Handler for certificates interface."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable,
+        sans: List[str] = None,
+    ) -> None:
+        """Run constructor."""
+        self.sans = sans
+        super().__init__(charm, relation_name, callback_f)
+
+    def setup_event_handler(self) -> None:
+        """Configure event handlers for peer relation."""
+        logger.debug("Setting up peer event handler")
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        import interface_tls_certificates.ca_client as ca_client
+        certs = ca_client.CAClient(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(
+            certs.on.ca_available,
+            self._request_certs)
+        self.framework.observe(
+            certs.on.tls_server_config_ready,
+            self._certs_ready)
+        return certs
+
+    def _request_certs(self, event: ops.framework.EventBase) -> None:
+        """Request Certificates."""
+        logger.debug(f"Requesting cert for {self.sans}")
+        self.interface.request_server_certificate(
+            self.model.unit.name.replace('/', '-'),
+            self.sans)
+        self.callback_f(event)
+
+    def _certs_ready(self, event: ops.framework.EventBase) -> None:
+        """Request Certificates."""
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        """Whether handler ready for use."""
+        return self.interface.is_server_cert_ready
+
+    def context(self) -> dict:
+        """Certificates context."""
+        key = self.interface.server_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption())
+        cert = self.interface.server_certificate.public_bytes(
+            encoding=serialization.Encoding.PEM)
+        try:
+            root_ca_chain = self.interface.root_ca_chain.public_bytes(
+                encoding=serialization.Encoding.PEM
+            )
+        except self.interface.CAClientError:
+            # A root ca chain is not always available. If configured to just
+            # use vault with self-signed certificates, you will not get a ca
+            # chain. Instead, you will get a CAClientError being raised. For
+            # now, use a bytes() object for the root_ca_chain as it shouldn't
+            # cause problems and if a ca_cert_chain comes later, then it will
+            # get updated.
+            root_ca_chain = bytes()
+        ca_cert = (
+            self.interface.ca_certificate.public_bytes(
+                encoding=serialization.Encoding.PEM) +
+            root_ca_chain)
+        ctxt = {
+            'key': key.decode(),
+            'cert': cert.decode(),
+            'ca_cert': ca_cert.decode()}
         return ctxt
