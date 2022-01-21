@@ -372,9 +372,17 @@ class BasePeerHandler(RelationHandler):
             self.relation_name,
         )
         self.framework.observe(
+            peer_int.on.peers_relation_joined, self._on_peers_relation_joined
+        )
+        self.framework.observe(
             peer_int.on.peers_data_changed, self._on_peers_data_changed
         )
         return peer_int
+
+    def _on_peers_relation_joined(
+            self, event: ops.framework.EventBase) -> None:
+        """Process peer joined event."""
+        self.callback_f(event)
 
     def _on_peers_data_changed(self, event: ops.framework.EventBase) -> None:
         """Process peer data changed event."""
@@ -590,7 +598,7 @@ class CertificatesHandler(RelationHandler):
 
     def setup_event_handler(self) -> None:
         """Configure event handlers for peer relation."""
-        logger.debug("Setting up peer event handler")
+        logger.debug("Setting up certificates event handler")
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
         import interface_tls_certificates.ca_client as ca_client
