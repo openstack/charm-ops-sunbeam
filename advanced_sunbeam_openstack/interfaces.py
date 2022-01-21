@@ -44,10 +44,17 @@ class PeersDataChangedEvent(EventBase):
     pass
 
 
+class PeersRelationJoinedEvent(EventBase):
+    """The PeersRelationJoinedEvent indicates a new unit has joined."""
+
+    pass
+
+
 class PeersEvents(ObjectEvents):
     """Peer Events."""
 
     peers_relation_created = EventSource(PeersRelationCreatedEvent)
+    peers_relation_joined = EventSource(PeersRelationJoinedEvent)
     peers_data_changed = EventSource(PeersDataChangedEvent)
 
 
@@ -65,6 +72,9 @@ class OperatorPeers(Object):
             charm.on[relation_name].relation_created, self.on_created
         )
         self.framework.observe(
+            charm.on[relation_name].relation_joined, self.on_joined
+        )
+        self.framework.observe(
             charm.on[relation_name].relation_changed, self.on_changed
         )
 
@@ -77,6 +87,11 @@ class OperatorPeers(Object):
     def _app_data_bag(self) -> typing.Dict[str, str]:
         """Return all app data on peer relation."""
         return self.peers_rel.data[self.peers_rel.app]
+
+    def on_joined(self, event: ops.framework.EventBase) -> None:
+        """Handle relation joined event."""
+        logging.info("Peer joined")
+        self.on.peers_relation_joined.emit()
 
     def on_created(self, event: ops.framework.EventBase) -> None:
         """Handle relation created event."""
@@ -100,3 +115,26 @@ class OperatorPeers(Object):
     def get_all_app_data(self) -> None:
         """Return all the app data from the relation."""
         return self._app_data_bag
+
+    def get_all_unit_values(self, key: str) -> typing.List[str]:
+        """Retrieve value for key from all related units."""
+        values = []
+        for unit in self.peers_rel.units:
+            values.append(self.peers_rel.data[unit].get(key))
+        return values
+
+    def set_unit_data(self, settings: typing.Dict[str, str]) -> None:
+        """Publish settings on the peer unit data bag."""
+        for k, v in settings.items():
+            self.peers_rel.data[self.model.unit][k] = v
+
+    def all_joined_units(self) -> typing.List[ops.model.Unit]:
+        """All remote units joined to the peer relation."""
+        return set(self.peers_rel.units)
+
+    def expected_peer_units(self) -> int:
+        """Return the Number of units expected on relation.
+
+        NOTE: This count includes this unit
+        """
+        return self.peers_rel.app.planned_units()
