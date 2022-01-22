@@ -184,6 +184,10 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             if ph.pebble_ready:
                 logging.debug(f"Running init for {ph.service_name}")
                 ph.init_service(self.contexts())
+            else:
+                logging.debug(
+                    f"Not running init for {ph.service_name},"
+                    " container not ready")
 
         for ph in self.pebble_handlers:
             if not ph.service_ready:
