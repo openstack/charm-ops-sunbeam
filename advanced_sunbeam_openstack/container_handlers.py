@@ -19,6 +19,7 @@ configuration to the containers and managing the service running
 in the container.
 """
 
+import collections
 import logging
 
 import advanced_sunbeam_openstack.core as sunbeam_core
@@ -30,6 +31,10 @@ from collections.abc import Callable
 from typing import List
 
 logger = logging.getLogger(__name__)
+
+ContainerDir = collections.namedtuple(
+    "ContainerDir", ["path", "user", "group"]
+)
 
 
 class PebbleHandler(ops.charm.Object):
@@ -105,12 +110,30 @@ class PebbleHandler(ops.charm.Object):
         """Pebble configuration layer for the container."""
         return {}
 
+    @property
+    def directories(self) -> List[ContainerDir]:
+        """List of directories to create in container."""
+        return []
+
+    def setup_dirs(self) -> None:
+        """Create directories in container."""
+        if self.directories:
+            container = self.charm.unit.get_container(self.container_name)
+            for d in self.directories:
+                logging.debug(f"Creating {d.path}")
+                container.make_dir(
+                    d.path,
+                    user=d.user,
+                    group=d.group,
+                    make_parents=True)
+
     def init_service(self, context: sunbeam_core.OPSCharmContexts) -> None:
         """Initialise service ready for use.
 
         Write configuration files to the container and record
         that service is ready for us.
         """
+        self.setup_dirs()
         self.write_config(context)
         self._state.service_ready = True
 
@@ -150,6 +173,7 @@ class ServicePebbleHandler(PebbleHandler):
         Write configuration files to the container and record
         that service is ready for us.
         """
+        self.setup_dirs()
         self.write_config(context)
         self.start_service()
         self._state.service_ready = True
@@ -161,6 +185,11 @@ class ServicePebbleHandler(PebbleHandler):
             logger.debug(f'{self.container_name} container is not ready. '
                          'Cannot start service.')
             return
+        if self.service_name not in container.get_services().keys():
+            container.add_layer(
+                self.service_name,
+                self.get_layer(),
+                combine=True)
         service = container.get_service(self.service_name)
         if service.is_running():
             container.stop(self.service_name)
