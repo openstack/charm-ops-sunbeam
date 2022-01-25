@@ -984,3 +984,50 @@ class OVSDBCMSProvidesHandler(RelationHandler, OVNRelationUtils):
     def ready(self) -> bool:
         """Whether the interface is ready."""
         return True
+
+
+class OVSDBCMSRequiresHandler(RelationHandler, OVNRelationUtils):
+    """Handle provides side of ovsdb-cms."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable
+    ) -> None:
+        """Run constructor."""
+        super().__init__(charm, relation_name, callback_f)
+
+    def setup_event_handler(self) -> ops.charm.Object:
+        """Configure event handlers for an Identity service relation."""
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        logger.debug("Setting up ovs-cms requires event handler")
+        import charms.sunbeam_ovn_central_operator.v0.ovsdb as ovsdb
+        ovsdb_svc = ovsdb.OVSDBCMSRequires(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(
+            ovsdb_svc.on.ready,
+            self._on_ovsdb_service_ready)
+        return ovsdb_svc
+
+    def _on_ovsdb_service_ready(self, event: ops.framework.EventBase) -> None:
+        """Handle OVSDB CMS change events."""
+        print("ready")
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        """Whether the interface is ready."""
+        print("Checking Ready")
+        print(self.interface.bound_addresses())
+        return self.interface.remote_ready()
+
+    def context(self) -> dict:
+        """Context from relation data."""
+        ctxt = super().context()
+        ctxt.update({
+            'addresses': self.interface.bound_addresses()})
+        return ctxt
