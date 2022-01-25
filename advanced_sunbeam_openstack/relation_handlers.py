@@ -767,6 +767,29 @@ class OVNRelationUtils():
         return self.db_connection_strs(self.cluster_remote_addrs,
                                        self.db_sb_port)
 
+    @property
+    def cluster_local_addr(self) -> ipaddress.IPv4Address:
+        """Retrieve local address bound to endpoint.
+
+        :returns: IPv4 or IPv6 address bound to endpoint
+        :rtype: str
+        """
+        return self._endpoint_local_bound_addr()
+
+    def _endpoint_local_bound_addr(self) -> ipaddress.IPv4Address:
+        """Retrieve local address bound to endpoint.
+
+        :returns: IPv4 or IPv6 address bound to endpoint
+        :rtype: str
+        """
+        addr = None
+        for relation in self.charm.model.relations.get(self.relation_name, []):
+            binding = self.charm.model.get_binding(relation)
+            addr = binding.network.bind_address
+            break
+        return addr
+
+
 #   def expected_units_available(self):
 #       """Whether expected units have joined and published data on a relation.
 #
@@ -794,28 +817,6 @@ class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
     DB_NB_CLUSTER_PORT = 6643
     DB_SB_CLUSTER_PORT = 6644
 
-    def _endpoint_local_bound_addr(self) -> ipaddress.IPv4Address:
-        """Retrieve local address bound to endpoint.
-
-        :returns: IPv4 or IPv6 address bound to endpoint
-        :rtype: str
-        """
-        addr = None
-        for relation in self.charm.model.relations.get(self.relation_name, []):
-            binding = self.charm.model.get_binding(relation)
-            addr = binding.network.bind_address
-            break
-        return addr
-
-    @property
-    def cluster_local_addr(self) -> ipaddress.IPv4Address:
-        """Retrieve local address bound to endpoint.
-
-        :returns: IPv4 or IPv6 address bound to endpoint
-        :rtype: str
-        """
-        return self._endpoint_local_bound_addr()
-
     def publish_cluster_local_addr(
             self,
             addr: ipaddress.IPv4Address = None) -> Dict:
@@ -827,7 +828,6 @@ class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
         :param addr: Override address to announce.
         :type addr: Optional[str]
         """
-        print(type(addr))
         _addr = addr or self.cluster_local_addr
         self.interface.set_unit_data({'bound-address': str(_addr)})
 
@@ -941,3 +941,46 @@ class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
             'db_nb_connection_strs': self.db_nb_connection_strs,
             'db_sb_connection_strs': self.db_sb_connection_strs})
         return ctxt
+
+
+class OVSDBCMSProvidesHandler(RelationHandler, OVNRelationUtils):
+    """Handle provides side of ovsdb-cms."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable
+    ) -> None:
+        """Run constructor."""
+        super().__init__(charm, relation_name, callback_f)
+
+    def setup_event_handler(self) -> ops.charm.Object:
+        """Configure event handlers for an Identity service relation."""
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        logger.debug("Setting up ovs-cms provides event handler")
+        import charms.sunbeam_ovn_central_operator.v0.ovsdb as ovsdb
+        ovsdb_svc = ovsdb.OVSDBCMSProvides(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(
+            ovsdb_svc.on.ready,
+            self._on_ovsdb_service_ready)
+        return ovsdb_svc
+
+    def _on_ovsdb_service_ready(self, event: ops.framework.EventBase) -> None:
+        """Handle OVSDB CMS change events."""
+        # Ready is only emitted when the interface considers
+        # that the relation is complete (indicated by a password)
+        # _addr = addr or self.cluster_local_addr
+        self.interface.set_unit_data(
+            {
+                'bound-address': str(self.cluster_local_addr)})
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        """Whether the interface is ready."""
+        return True
