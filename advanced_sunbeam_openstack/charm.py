@@ -119,6 +119,11 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self, "certificates", self.configure_charm, self.get_sans(),
             )
             handlers.append(self.certs)
+        if self.can_add_handler("ovsdb-cms", handlers):
+            self.certs = sunbeam_rhandlers.OVSDBCMSRequiresHandler(
+                self, "ovsdb-cms", self.configure_charm,
+            )
+            handlers.append(self.certs)
         return handlers
 
     def get_sans(self) -> List[str]:
