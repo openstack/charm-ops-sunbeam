@@ -1015,19 +1015,19 @@ class OVSDBCMSRequiresHandler(RelationHandler, OVNRelationUtils):
 
     def _on_ovsdb_service_ready(self, event: ops.framework.EventBase) -> None:
         """Handle OVSDB CMS change events."""
-        print("ready")
         self.callback_f(event)
 
     @property
     def ready(self) -> bool:
         """Whether the interface is ready."""
-        print("Checking Ready")
-        print(self.interface.bound_addresses())
         return self.interface.remote_ready()
 
     def context(self) -> dict:
         """Context from relation data."""
         ctxt = super().context()
         ctxt.update({
-            'addresses': self.interface.bound_addresses()})
+            'addresses': self.interface.bound_addresses(),
+            'db_sb_connection_strs': ','.join(self.db_sb_connection_strs),
+            'db_nb_connection_strs': ','.join(self.db_nb_connection_strs)})
+
         return ctxt
