@@ -748,6 +748,37 @@ class OVNRelationUtils():
         return self.DB_SB_PORT
 
     @property
+    def db_sb_admin_port(self) -> int:
+        """Provide admin port number for OVN Southbound OVSDB.
+
+        This is a special listener to allow ``ovn-northd`` to connect to an
+        endpoint without RBAC enabled as there is currently no RBAC profile
+        allowing ``ovn-northd`` to perform its work.
+
+        :returns: admin port number for OVN Southbound OVSDB.
+        :rtype: int
+        """
+        return self.DB_SB_ADMIN_PORT
+
+    @property
+    def db_nb_cluster_port(self) -> int:
+        """Provide port number for OVN Northbound OVSDB.
+
+        :returns port number for OVN Northbound OVSDB.
+        :rtype: int
+        """
+        return self.DB_NB_CLUSTER_PORT
+
+    @property
+    def db_sb_cluster_port(self) -> int:
+        """Provide port number for OVN Southbound OVSDB.
+
+        :returns: port number for OVN Southbound OVSDB.
+        :rtype: int
+        """
+        return self.DB_SB_CLUSTER_PORT
+
+    @property
     def db_nb_connection_strs(self) -> Iterator[str]:
         """Provide OVN Northbound OVSDB connection strings.
 
@@ -830,37 +861,6 @@ class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
         """
         _addr = addr or self.cluster_local_addr
         self.interface.set_unit_data({'bound-address': str(_addr)})
-
-    @property
-    def db_sb_admin_port(self) -> int:
-        """Provide admin port number for OVN Southbound OVSDB.
-
-        This is a special listener to allow ``ovn-northd`` to connect to an
-        endpoint without RBAC enabled as there is currently no RBAC profile
-        allowing ``ovn-northd`` to perform its work.
-
-        :returns: admin port number for OVN Southbound OVSDB.
-        :rtype: int
-        """
-        return self.DB_SB_ADMIN_PORT
-
-    @property
-    def db_nb_cluster_port(self) -> int:
-        """Provide port number for OVN Northbound OVSDB.
-
-        :returns port number for OVN Northbound OVSDB.
-        :rtype: int
-        """
-        return self.DB_NB_CLUSTER_PORT
-
-    @property
-    def db_sb_cluster_port(self) -> int:
-        """Provide port number for OVN Southbound OVSDB.
-
-        :returns: port number for OVN Southbound OVSDB.
-        :rtype: int
-        """
-        return self.DB_SB_CLUSTER_PORT
 
     def expected_peers_available(self) -> bool:
         """Whether expected peers have joined and published data on peer rel.
