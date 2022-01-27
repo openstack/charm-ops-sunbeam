@@ -669,6 +669,9 @@ class OVNRelationUtils():
 
     DB_NB_PORT = 6641
     DB_SB_PORT = 6642
+    DB_SB_ADMIN_PORT = 16642
+    DB_NB_CLUSTER_PORT = 6643
+    DB_SB_CLUSTER_PORT = 6644
 
     def _format_addr(self, addr: str) -> str:
         """Validate and format IP address.
@@ -843,10 +846,6 @@ class OVNRelationUtils():
 
 class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
     """Handle OVN peer relation."""
-
-    DB_SB_ADMIN_PORT = 16642
-    DB_NB_CLUSTER_PORT = 6643
-    DB_SB_CLUSTER_PORT = 6644
 
     def publish_cluster_local_addr(
             self,
