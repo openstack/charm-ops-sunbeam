@@ -119,6 +119,8 @@ class OperatorPeers(Object):
     def get_all_unit_values(self, key: str) -> typing.List[str]:
         """Retrieve value for key from all related units."""
         values = []
+        if not self.peers_rel:
+            return values
         for unit in self.peers_rel.units:
             values.append(self.peers_rel.data[unit].get(key))
         return values
