@@ -973,8 +973,8 @@ class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
                 self.db_sb_cluster_connection_strs,
             'db_sb_cluster_port': self.db_sb_cluster_port,
             'db_nb_cluster_port': self.db_nb_cluster_port,
-            'db_nb_connection_strs': self.db_nb_connection_strs,
-            'db_sb_connection_strs': self.db_sb_connection_strs})
+            'db_nb_connection_strs': list(self.db_nb_connection_strs),
+            'db_sb_connection_strs': list(self.db_sb_connection_strs)})
         return ctxt
 
 
