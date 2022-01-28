@@ -907,6 +907,38 @@ class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
                                     self.db_nb_port))
 
     @property
+    def db_nb_cluster_connection_strs(self) -> Iterator[str]:
+        """Provide Northbound DB Cluster connection strings.
+
+        We override the parent property because for the peer relation
+        ``cluster_remote_addrs`` does not contain self.
+
+        :returns: Northbound DB connection strings
+        :rtype: Iterator[str]
+        """
+        return itertools.chain(
+            self.db_connection_strs((self.cluster_local_addr,),
+                                    self.db_nb_cluster_port),
+            self.db_connection_strs(self.cluster_remote_addrs,
+                                    self.db_nb_cluster_port))
+
+    @property
+    def db_sb_cluster_connection_strs(self) -> Iterator[str]:
+        """Provide Southbound DB Cluster connection strings.
+
+        We override the parent property because for the peer relation
+        ``cluster_remote_addrs`` does not contain self.
+
+        :returns: Southbound DB connection strings
+        :rtype: Iterator[str]
+        """
+        return itertools.chain(
+            self.db_connection_strs((self.cluster_local_addr,),
+                                    self.db_sb_cluster_port),
+            self.db_connection_strs(self.cluster_remote_addrs,
+                                    self.db_sb_cluster_port))
+
+    @property
     def db_sb_connection_strs(self) -> Iterator[str]:
         """Provide Southbound DB connection strings.
 
@@ -935,6 +967,10 @@ class OVNDBClusterPeerHandler(BasePeerHandler, OVNRelationUtils):
         ctxt.update({
             'cluster_local_addr': self.cluster_local_addr,
             'cluster_remote_addrs': self.cluster_remote_addrs,
+            'db_nb_cluster_connection_strs':
+                self.db_nb_cluster_connection_strs,
+            'db_sb_cluster_connection_strs':
+                self.db_nb_cluster_connection_strs,
             'db_sb_cluster_port': self.db_sb_cluster_port,
             'db_nb_cluster_port': self.db_nb_cluster_port,
             'db_nb_connection_strs': self.db_nb_connection_strs,
