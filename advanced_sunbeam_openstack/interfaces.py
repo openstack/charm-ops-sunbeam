@@ -110,6 +110,8 @@ class OperatorPeers(Object):
 
     def get_app_data(self, key: str) -> None:
         """Get the value corresponding to key from the app data bag."""
+        if not self.peers_rel:
+            return None
         return self._app_data_bag.get(key)
 
     def get_all_app_data(self) -> None:
