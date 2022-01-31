@@ -1061,6 +1061,7 @@ class OVSDBCMSRequiresHandler(RelationHandler, OVNRelationUtils):
         """Context from relation data."""
         ctxt = super().context()
         ctxt.update({
+            'local_address': self._endpoint_local_bound_addr(),
             'addresses': self.interface.bound_addresses(),
             'db_sb_connection_strs': ','.join(self.db_sb_connection_strs),
             'db_nb_connection_strs': ','.join(self.db_nb_connection_strs)})
