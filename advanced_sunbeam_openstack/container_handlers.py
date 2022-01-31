@@ -295,3 +295,92 @@ class WSGIPebbleHandler(PebbleHandler):
                 [self.container_name], self.wsgi_conf, "root", "root"
             )
         ]
+
+
+class OVNPebbleHandler(ServicePebbleHandler):
+    """Common class for OVN services."""
+
+    @property
+    def wrapper_script(self) -> str:
+        """Path to OVN service wrapper."""
+        raise NotImplementedError
+
+    def init_service(self, context: sunbeam_core.OPSCharmContexts) -> None:
+        """Initialise service ready for use.
+
+        Write configuration files to the container and record
+        that service is ready for us.
+
+        NOTE: Override default to services being automatically started
+        """
+        self.setup_dirs()
+        self.write_config(context)
+        self._state.service_ready = True
+
+    @property
+    def service_description(self) -> str:
+        """Return a short decription of service e.g. OVN Southbound DB."""
+        raise NotImplementedError
+
+    def get_layer(self) -> dict:
+        """Pebble configuration layer for OVN service."""
+        return {
+            "summary": f"{self.service_description} service",
+            "description": ("Pebble config layer for "
+                            f"{self.service_description}"),
+            "services": {
+                "ovn-service": {
+                    "override": "replace",
+                    "summary": f"{self.service_description}",
+                    "command": f"bash {self.wrapper_script}",
+                    "startup": "disabled",
+                },
+            },
+        }
+
+    @property
+    def directories(self) -> List[ContainerDir]:
+        """Directories to creete in container."""
+        return [
+            ContainerDir(
+                '/etc/ovn',
+                'root',
+                'root'),
+            ContainerDir(
+                '/run/ovn',
+                'root',
+                'root'),
+            ContainerDir(
+                '/var/lib/ovn',
+                'root',
+                'root'),
+            ContainerDir(
+                '/var/log/ovn',
+                'root',
+                'root')]
+
+    def default_container_configs(
+        self
+    ) -> List[sunbeam_core.ContainerConfigFile]:
+        """Files to render into containers."""
+        return [
+            sunbeam_core.ContainerConfigFile(
+                [self.container_name],
+                self.wrapper_script,
+                'root',
+                'root'),
+            sunbeam_core.ContainerConfigFile(
+                [self.container_name],
+                '/etc/ovn/key_host',
+                'root',
+                'root'),
+            sunbeam_core.ContainerConfigFile(
+                [self.container_name],
+                '/etc/ovn/cert_host',
+                'root',
+                'root'),
+            sunbeam_core.ContainerConfigFile(
+                [self.container_name],
+                '/etc/ovn/ovn-central.crt',
+                'root',
+                'root')]
