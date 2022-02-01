@@ -95,13 +95,14 @@ class PebbleHandler(ops.charm.Object):
         """
         container = self.charm.unit.get_container(self.container_name)
         if container:
-            sunbeam_templating.sidecar_config_render(
-                [container],
-                self.container_configs,
-                self.template_dir,
-                self.openstack_release,
-                context,
-            )
+            for config in self.container_configs:
+                sunbeam_templating.sidecar_config_render(
+                    container,
+                    config,
+                    self.template_dir,
+                    self.openstack_release,
+                    context,
+                )
             self._state.config_pushed = True
         else:
             logger.debug("Container not ready")
@@ -297,7 +298,7 @@ class WSGIPebbleHandler(PebbleHandler):
         """Container configs for WSGI service."""
         return [
             sunbeam_core.ContainerConfigFile(
-                [self.container_name], self.wsgi_conf, "root", "root"
+                self.wsgi_conf, "root", "root"
             )
         ]
 
@@ -370,22 +371,18 @@ class OVNPebbleHandler(ServicePebbleHandler):
         """Files to render into containers."""
         return [
             sunbeam_core.ContainerConfigFile(
-                [self.container_name],
                 self.wrapper_script,
                 'root',
                 'root'),
             sunbeam_core.ContainerConfigFile(
-                [self.container_name],
                 '/etc/ovn/key_host',
                 'root',
                 'root'),
             sunbeam_core.ContainerConfigFile(
-                [self.container_name],
                 '/etc/ovn/cert_host',
                 'root',
                 'root'),
             sunbeam_core.ContainerConfigFile(
-                [self.container_name],
                 '/etc/ovn/ovn-central.crt',
                 'root',
                 'root')]

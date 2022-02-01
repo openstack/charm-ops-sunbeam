@@ -417,7 +417,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         _cconfigs.extend(
             [
                 sunbeam_core.ContainerConfigFile(
-                    [self.wsgi_container_name],
                     self.service_conf,
                     self.service_user,
                     self.service_group,

@@ -40,8 +40,8 @@ def get_container(
 
 
 def sidecar_config_render(
-    containers: List['ops.model.Container'],
-    container_configs: List['sunbeam_core.ContainerConfigFile'],
+    container: 'ops.model.Container',
+    config: 'sunbeam_core.ContainerConfigFile',
     template_dir: str,
     openstack_release: str,
     context: 'sunbeam_core.OPSCharmContexts',
@@ -49,21 +49,17 @@ def sidecar_config_render(
     """Render templates inside containers."""
     loader = get_loader(template_dir, openstack_release)
     _tmpl_env = jinja2.Environment(loader=loader)
-    for config in container_configs:
-        for container_name in config.container_names:
-            try:
-                template = _tmpl_env.get_template(
-                    os.path.basename(config.path) + ".j2"
-                )
-            except jinja2.exceptions.TemplateNotFound:
-                template = _tmpl_env.get_template(
-                    os.path.basename(config.path)
-                )
-            container = get_container(containers, container_name)
-            contents = template.render(context)
-            kwargs = {"user": config.user, "group": config.group}
-            container.push(config.path, contents, **kwargs)
-            log.debug(
-                f"Wrote template {config.path} in container "
-                f"{container.name}."
-            )
+    try:
+        template = _tmpl_env.get_template(
+            os.path.basename(config.path) + ".j2"
+        )
+    except jinja2.exceptions.TemplateNotFound:
+        template = _tmpl_env.get_template(
+            os.path.basename(config.path)
+        )
+    contents = template.render(context)
+    kwargs = {"user": config.user, "group": config.group}
+    container.push(config.path, contents, **kwargs)
+    log.debug(
+        f"Wrote template {config.path} in container {container.name}."
+    )
