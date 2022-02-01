@@ -23,7 +23,9 @@ if TYPE_CHECKING:
     from advanced_sunbeam_openstack.relation_handlers import RelationHandler
 
 ContainerConfigFile = collections.namedtuple(
-    "ContainerConfigFile", ["path", "user", "group"]
+    "ContainerConfigFile",
+    ["path", "user", "group", "permissions"],
+    defaults=(None,)
 )
 
 
