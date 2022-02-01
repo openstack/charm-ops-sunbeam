@@ -173,8 +173,25 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             )
         ]
 
+    def get_named_pebble_handler(
+        self,
+        container_name: str
+    ) -> sunbeam_chandlers.PebbleHandler:
+        """Get pebble handler matching container_name."""
+        pebble_handlers = [
+            h
+            for h in self.pebble_handlers
+            if h.container_name == container_name
+        ]
+        assert len(pebble_handlers) < 2, ("Multiple pebble handlers with the "
+                                          "same name found.")
+        if pebble_handlers:
+            return pebble_handlers[0]
+        else:
+            return None
+
     def configure_charm(self, event: ops.framework.EventBase) -> None:
-        """Catchall handler to cconfigure charm services."""
+        """Catchall handler to configure charm services."""
         if self.supports_peer_relation and not (
             self.unit.is_leader() or self.is_leader_ready()
         ):

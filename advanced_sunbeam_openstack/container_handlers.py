@@ -164,6 +164,25 @@ class PebbleHandler(ops.charm.Object):
         """Determine whether the service the container provides is running."""
         return self._state.service_ready
 
+    def execute(self, cmd: List, exception_on_error: bool = False) -> str:
+        """Execute given command in contianer managed by this handler."""
+        container = self.charm.unit.get_container(self.container_name)
+        process = container.exec(cmd)
+        try:
+            stdout, _ = process.wait_output()
+            # Not logging the command in case it included a password,
+            # too cautious ?
+            logger.debug('Command complete')
+            for line in stdout.splitlines():
+                logger.debug('    %s', line)
+            return stdout
+        except ops.pebble.ExecError as e:
+            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            for line in e.stderr.splitlines():
+                logger.error('    %s', line)
+            if exception_on_error:
+                raise
+
 
 class ServicePebbleHandler(PebbleHandler):
     """Container handler for containers which manage a service."""
