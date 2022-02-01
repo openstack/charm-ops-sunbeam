@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from advanced_sunbeam_openstack.relation_handlers import RelationHandler
 
 ContainerConfigFile = collections.namedtuple(
-    "ContainerConfigFile", ["container_names", "path", "user", "group"]
+    "ContainerConfigFile", ["path", "user", "group"]
 )
 
 
