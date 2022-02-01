@@ -58,7 +58,10 @@ def sidecar_config_render(
             os.path.basename(config.path)
         )
     contents = template.render(context)
-    kwargs = {"user": config.user, "group": config.group}
+    kwargs = {
+        "user": config.user,
+        "group": config.group,
+        "permissions": config.permissions}
     container.push(config.path, contents, **kwargs)
     log.debug(
         f"Wrote template {config.path} in container {container.name}."
