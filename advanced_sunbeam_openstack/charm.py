@@ -37,11 +37,11 @@ from typing import List
 import ops.charm
 import ops.framework
 import ops.model
+import ops.pebble
 
 import advanced_sunbeam_openstack.config_contexts as sunbeam_config_contexts
 import advanced_sunbeam_openstack.container_handlers as sunbeam_chandlers
 import advanced_sunbeam_openstack.core as sunbeam_core
-import advanced_sunbeam_openstack.cprocess as sunbeam_cprocess
 import advanced_sunbeam_openstack.relation_handlers as sunbeam_rhandlers
 
 
@@ -307,18 +307,18 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
     def run_db_sync(self) -> None:
         """Run DB sync to init DB.
 
-        :raises: sunbeam_cprocess.ContainerProcessError
+        :raises: pebble.ExecError
         """
         if hasattr(self, 'db_sync_cmds'):
             logger.info("Syncing database...")
             container = self.unit.get_container(self.wsgi_container_name)
             for cmd in self.db_sync_cmds:
                 logging.debug(f'Running sync: \n{cmd}')
-                out = sunbeam_cprocess.check_output(
-                    container,
-                    cmd,
-                    service_name='db-sync',
-                    timeout=180)
+                process = container.exec(cmd, timeout=5*60)
+                out, warnings = process.wait_output()
+                if warnings:
+                    for line in warnings.splitlines():
+                        logger.warning('DB Sync Out: %s', line.strip())
                 logging.debug(f'Output from database sync: \n{out}')
         else:
             logger.warn(
@@ -328,8 +328,11 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """Perform bootstrap."""
         try:
             self.run_db_sync()
-        except sunbeam_cprocess.ContainerProcessError:
+        except ops.pebble.ExecError as e:
             logger.exception('Failed to bootstrap')
+            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            for line in e.stderr.splitlines():
+                logger.error('    %s', line)
             self._state.bootstrapped = False
             return
 
