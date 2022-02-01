@@ -24,8 +24,8 @@ import logging
 
 import advanced_sunbeam_openstack.core as sunbeam_core
 import advanced_sunbeam_openstack.templating as sunbeam_templating
-import advanced_sunbeam_openstack.cprocess as sunbeam_cprocess
 import ops.charm
+import ops.pebble
 
 from collections.abc import Callable
 from typing import List
@@ -269,10 +269,15 @@ class WSGIPebbleHandler(PebbleHandler):
         container = self.charm.unit.get_container(self.container_name)
         self.write_config(context)
         try:
-            sunbeam_cprocess.check_output(
-                container, f"a2ensite {self.wsgi_service_name} && sleep 1"
-            )
-        except sunbeam_cprocess.ContainerProcessError:
+            process = container.exec(
+                ['a2ensite', {self.wsgi_service_name}],
+                timeout=5*60)
+            out, warnings = process.wait_output()
+            if warnings:
+                for line in warnings.splitlines():
+                    logger.warning('a2ensite warn: %s', line.strip())
+            logging.debug(f'Output from a2ensite: \n{out}')
+        except ops.pebble.ExecError:
             logger.exception(
                 f"Failed to enable {self.wsgi_service_name} site in apache"
             )
