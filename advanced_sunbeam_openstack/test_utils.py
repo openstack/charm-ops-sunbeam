@@ -27,7 +27,7 @@ import typing
 import unittest
 import yaml
 
-from mock import Mock, patch
+from mock import MagicMock, Mock, patch
 
 sys.path.append("lib")  # noqa
 sys.path.append("src")  # noqa
@@ -39,6 +39,12 @@ from ops.testing import Harness, _TestingModelBackend, _TestingPebbleClient
 
 class CharmTestCase(unittest.TestCase):
     """Class to make mocking easier."""
+
+    container_calls = {
+        'push': {},
+        'pull': [],
+        'exec': [],
+        'remove_path': []}
 
     def setUp(self, obj: 'typing.ANY', patches: 'typing.List') -> None:
         """Run constructor."""
@@ -212,6 +218,29 @@ def get_harness(
         def remove_path(self, path: str, *, recursive: bool = False) -> None:
             """Capture remove events and store in container_calls."""
             container_calls["remove_path"].append(path)
+
+        def exec(
+            self,
+            command: typing.List[str],
+            *,
+            environment: typing.Dict[str, str] = None,
+            working_dir: str = None,
+            timeout: float = None,
+            user_id: int = None,
+            user: str = None,
+            group_id: int = None,
+            group: str = None,
+            stdin: typing.Union[
+                str, bytes, typing.TextIO, typing.BinaryIO] = None,
+            stdout: typing.Union[typing.TextIO, typing.BinaryIO] = None,
+            stderr: typing.Union[typing.TextIO, typing.BinaryIO] = None,
+            encoding: str = 'utf-8',
+            combine_stderr: bool = False
+        ) -> None:
+            container_calls["exec"].append(command)
+            process_mock = MagicMock()
+            process_mock.wait_output.return_value = (None, None)
+            return process_mock
 
     class _OSTestingModelBackend(_TestingModelBackend):
         def get_pebble(self, socket_path: str) -> _OSTestingPebbleClient:
