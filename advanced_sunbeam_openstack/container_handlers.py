@@ -290,7 +290,7 @@ class WSGIPebbleHandler(PebbleHandler):
         self.write_config(context)
         try:
             process = container.exec(
-                ['a2ensite', {self.wsgi_service_name}],
+                ['a2ensite', self.wsgi_service_name],
                 timeout=5*60)
             out, warnings = process.wait_output()
             if warnings:
