@@ -39,11 +39,17 @@ import ops.framework
 import ops.model
 import ops.pebble
 
+from lightkube import Client
+from lightkube.resources.core_v1 import Service
+
 import advanced_sunbeam_openstack.config_contexts as sunbeam_config_contexts
 import advanced_sunbeam_openstack.container_handlers as sunbeam_chandlers
 import advanced_sunbeam_openstack.core as sunbeam_core
 import advanced_sunbeam_openstack.relation_handlers as sunbeam_rhandlers
 
+from charms.observability_libs.v0.kubernetes_service_patch import (
+    KubernetesServicePatch,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -361,6 +367,11 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         """Run constructor."""
         super().__init__(framework)
         self._state.set_default(db_ready=False)
+        self.service_patcher = KubernetesServicePatch(
+            self,
+            service_type="LoadBalancer",
+            ports=[(f"{self.app.name}", self.default_public_ingress_port)],
+        )
 
     @property
     def service_endpoints(self) -> List[dict]:
@@ -389,12 +400,32 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         return f"http://{hostname}:{self.default_public_ingress_port}"
 
     @property
+    def public_ingress_address(self) -> str:
+        """IP address or hostname for access to this service."""
+        svc_hostname = self.model.config.get("os-public-hostname")
+        if svc_hostname:
+            return svc_hostname
+
+        client = Client()
+        charm_service = client.get(
+            Service, name=self.app.name, namespace=self.model.name
+        )
+
+        status = charm_service.status
+        if status:
+            load_balancer_status = status.loadBalancer
+            if load_balancer_status:
+                ingress_addresses = load_balancer_status.ingress
+                if ingress_addresses:
+                    ingress_address = ingress_addresses[0]
+                    return ingress_address.hostname or ingress_address.ip
+
+        return None
+
+    @property
     def public_url(self) -> str:
         """Url for accessing the public endpoint for this service."""
-        svc_hostname = self.model.config.get(
-            "os-public-hostname", self.service_name
-        )
-        return self.service_url(svc_hostname)
+        return self.service_url(self.public_ingress_address)
 
     @property
     def admin_url(self) -> str:
