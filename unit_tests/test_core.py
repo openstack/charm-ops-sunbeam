@@ -14,6 +14,7 @@
 
 """Test aso."""
 
+import mock
 import json
 import sys
 
@@ -82,11 +83,12 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
 class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
     """Test for the OSBaseOperatorAPICharm class."""
 
-    PATCHES = [
-        'KubernetesServicePatch',
-    ]
+    PATCHES = []
 
-    def setUp(self) -> None:
+    @mock.patch(
+        'charms.observability_libs.v0.kubernetes_service_patch.'
+        'KubernetesServicePatch')
+    def setUp(self, mock_svc_patch: mock.patch) -> None:
         """Charm test class setup."""
         self.container_calls = {
             'push': {},

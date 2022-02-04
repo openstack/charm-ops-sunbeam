@@ -47,9 +47,7 @@ import advanced_sunbeam_openstack.container_handlers as sunbeam_chandlers
 import advanced_sunbeam_openstack.core as sunbeam_core
 import advanced_sunbeam_openstack.relation_handlers as sunbeam_rhandlers
 
-from charms.observability_libs.v0.kubernetes_service_patch import (
-    KubernetesServicePatch,
-)
+import charms.observability_libs.v0.kubernetes_service_patch as kube_svc_patch
 
 logger = logging.getLogger(__name__)
 
@@ -362,7 +360,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         """Run constructor."""
         super().__init__(framework)
         self._state.set_default(db_ready=False)
-        self.service_patcher = KubernetesServicePatch(
+        self.service_patcher = kube_svc_patch.KubernetesServicePatch(
             self,
             service_type="LoadBalancer",
             ports=[(f"{self.app.name}", self.default_public_ingress_port)],
