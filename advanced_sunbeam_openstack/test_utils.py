@@ -16,6 +16,7 @@
 
 """Module containing shared code to be used in a charms units tests."""
 
+import yaml
 import inspect
 import io
 import json
@@ -297,4 +298,9 @@ def get_harness(
     )
     if initial_charm_config:
         harness.update_config(initial_charm_config)
+    else:
+        defaults = {
+            k: v['default']
+            for k, v in yaml.load(charm_config)['options'].items()}
+        harness.update_config(defaults)
     return harness
