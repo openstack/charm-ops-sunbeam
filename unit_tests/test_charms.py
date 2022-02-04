@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import ops.framework
 
-sys.path.append("lib")  # noqa
+sys.path.append("unit_tests/lib")  # noqa
 sys.path.append("src")  # noqa
 
 import advanced_sunbeam_openstack.charm as sunbeam_charm
