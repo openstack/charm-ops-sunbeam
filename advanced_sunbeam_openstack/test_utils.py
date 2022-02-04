@@ -25,7 +25,6 @@ import pathlib
 import sys
 import typing
 import unittest
-import yaml
 
 from mock import MagicMock, Mock, patch
 
@@ -181,9 +180,10 @@ def add_api_relations(harness: Harness) -> None:
 
 def get_harness(
     charm_class: ops.charm.CharmBase,
-    charm_metadata: dict = None,
+    charm_metadata: str = None,
     container_calls: dict = None,
-    charm_config: dict = None,
+    charm_config: str = None,
+    initial_charm_config: dict = None,
 ) -> Harness:
     """Return a testing harness."""
 
@@ -281,11 +281,12 @@ def get_harness(
         config_file = f"{charm_dir}/config.yaml"
         if os.path.isfile(config_file):
             with open(config_file) as f:
-                charm_config = yaml.safe_load(f.read())["options"]
+                charm_config = f.read()
 
     harness = Harness(
         charm_class,
         meta=charm_metadata,
+        config=charm_config
     )
     harness._backend = _OSTestingModelBackend(
         harness._unit_name, harness._meta
@@ -294,6 +295,6 @@ def get_harness(
     harness._framework = framework.Framework(
         ":memory:", harness._charm_dir, harness._meta, harness._model
     )
-    if charm_config:
-        harness.update_config(charm_config)
+    if initial_charm_config:
+        harness.update_config(initial_charm_config)
     return harness
