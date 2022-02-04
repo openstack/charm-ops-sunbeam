@@ -14,13 +14,14 @@
 
 """Base classes for defining an OVN charm using the Operator framework."""
 
-import ops.charm
 from typing import List
 
+from . import relation_handlers as ovn_relation_handlers
 from .. import relation_handlers as sunbeam_rhandlers
+from .. import charm as sunbeam_charm
 
 
-class OSBaseOVNOperatorCharm(ops.charm.CharmBase):
+class OSBaseOVNOperatorCharm(sunbeam_charm.OSBaseOperatorCharm):
     """Base charms for OpenStack operators."""
 
     def get_relation_handlers(
@@ -29,8 +30,9 @@ class OSBaseOVNOperatorCharm(ops.charm.CharmBase):
         """Relation handlers for the service."""
         handlers = handlers or []
         if self.can_add_handler("ovsdb-cms", handlers):
-            self.ovsdb_cms = sunbeam_rhandlers.OVSDBCMSRequiresHandler(
+            self.ovsdb_cms = ovn_relation_handlers.OVSDBCMSRequiresHandler(
                 self, "ovsdb-cms", self.configure_charm,
             )
             handlers.append(self.ovsdb_cms)
+        handlers = super().get_relation_handlers(handlers)
         return handlers
