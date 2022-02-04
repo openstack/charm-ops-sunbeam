@@ -35,14 +35,16 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
         """Charm test class setup."""
         self.container_calls = {
             'push': {},
+            'exec': [],
             'pull': [],
             'remove_path': []}
         super().setUp(sunbeam_charm, self.PATCHES)
         self.harness = test_utils.get_harness(
             test_charms.MyCharm,
             test_charms.CHARM_METADATA,
-            self.container_calls)
-        self.harness.update_config(test_charms.CHARM_CONFIG)
+            self.container_calls,
+            charm_config=test_charms.CHARM_CONFIG,
+            initial_charm_config=test_charms.INITIAL_CHARM_CONFIG)
         self.harness.begin()
         self.addCleanup(self.harness.cleanup)
 
@@ -81,12 +83,14 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
     """Test for the OSBaseOperatorAPICharm class."""
 
     PATCHES = [
+        'KubernetesServicePatch',
     ]
 
     def setUp(self) -> None:
         """Charm test class setup."""
         self.container_calls = {
             'push': {},
+            'exec': [],
             'pull': [],
             'remove_path': []}
 
@@ -94,10 +98,11 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.harness = test_utils.get_harness(
             test_charms.MyAPICharm,
             test_charms.API_CHARM_METADATA,
-            self.container_calls)
+            self.container_calls,
+            charm_config=test_charms.CHARM_CONFIG,
+            initial_charm_config=test_charms.INITIAL_CHARM_CONFIG)
 
         self.addCleanup(self.harness.cleanup)
-        self.harness.update_config(test_charms.CHARM_CONFIG)
         self.harness.begin()
 
     def set_pebble_ready(self) -> None:

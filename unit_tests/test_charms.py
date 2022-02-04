@@ -30,7 +30,21 @@ sys.path.append("src")  # noqa
 
 import advanced_sunbeam_openstack.charm as sunbeam_charm
 
-CHARM_CONFIG = {"region": "RegionOne", "debug": "true"}
+CHARM_CONFIG = """
+options:
+  debug:
+    default: True
+    description: Enable debug logging.
+    type: boolean
+  region:
+    default: RegionOne
+    description: Region
+    type: str
+"""
+
+INITIAL_CHARM_CONFIG = {
+    'debug': 'true',
+    'region': 'RegionOne'}
 
 CHARM_METADATA = """
 name: my-service

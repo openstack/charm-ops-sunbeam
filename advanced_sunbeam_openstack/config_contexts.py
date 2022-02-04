@@ -123,15 +123,3 @@ class CinderCephConfigurationContext(ConfigContext):
             'backend_name': backend_name,
             'backend_availability_zone': config('backend-availability-zone'),
         }
-
-
-class OVNDBConfigContext(ConfigContext):
-    """Context for OVN charms."""
-
-    def context(self) -> dict:
-        """Context for OVN certs and leadership."""
-        return {
-            'is_charm_leader': self.charm.unit.is_leader(),
-            'ovn_key': '/etc/ovn/key_host',
-            'ovn_cert': '/etc/ovn/cert_host',
-            'ovn_ca_cert': '/etc/ovn/ovn-central.crt'}
