@@ -32,7 +32,7 @@ tests_require = [
 
 setup(
     license='Apache-2.0: http://www.apache.org/licenses/LICENSE-2.0',
-    packages=find_packages(exclude=["unit_tests"]),
+    packages=find_packages(exclude=["unit_tests", "lib"]),
     zip_safe=False,
     install_requires=install_require,
 )
