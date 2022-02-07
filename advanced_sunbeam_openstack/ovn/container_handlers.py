@@ -52,7 +52,7 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
             "description": ("Pebble config layer for "
                             f"{self.service_description}"),
             "services": {
-                "ovn-service": {
+                self.service_name: {
                     "override": "replace",
                     "summary": f"{self.service_description}",
                     "command": f"bash {self.wrapper_script}",
