@@ -204,7 +204,8 @@ class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
         :type addr: Optional[str]
         """
         _addr = addr or self.cluster_local_addr
-        self.interface.set_unit_data({'bound-address': str(_addr)})
+        if _addr:
+            self.interface.set_unit_data({'bound-address': str(_addr)})
 
     def expected_peers_available(self) -> bool:
         """Whether expected peers have joined and published data on peer rel.
