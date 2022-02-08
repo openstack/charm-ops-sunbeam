@@ -1,6 +1,5 @@
-# ops >= 1.2.0
+ops
 jinja2
-git+https://github.com/canonical/operator@2875e73e#egg=ops
 git+https://opendev.org/openstack/charm-ops-openstack#egg=ops_openstack
 git+https://github.com/openstack-charmers/advanced-sunbeam-openstack#egg=advanced_sunbeam_openstack
 lightkube

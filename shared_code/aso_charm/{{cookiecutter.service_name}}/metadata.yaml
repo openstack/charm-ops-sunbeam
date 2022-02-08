@@ -1,0 +1,42 @@
+name: {{ cookiecutter.charm_name }}
+summary: OpenStack {{ cookiecutter.service_name }} service
+maintainer: OpenStack Charmers <openstack-charmers@lists.ubuntu.com>
+description: |
+  OpenStack {{ cookiecutter.service_name }} provides an HTTP service for managing, selecting,
+  and claiming providers of classes of inventory representing available
+  resources in a cloud.
+  .
+version: 3
+bases:
+  - name: ubuntu
+    channel: 20.04/stable
+tags:
+- openstack
+
+containers:
+  {{ cookiecutter.service_name }}-api:
+    resource: {{ cookiecutter.service_name }}-api-image
+
+resources:
+  {{ cookiecutter.service_name }}-api-image:
+    type: oci-image
+    description: OCI image for OpenStack {{ cookiecutter.service_name }}
+
+requires:
+  shared-db:
+    interface: mysql_datastore
+    limit: 1
+  identity-service:
+    interface: keystone
+  ingress:
+    interface: ingress
+  amqp:
+    interface: rabbitmq
+
+provides:
+  {{ cookiecutter.service_name }}:
+    interface: {{ cookiecutter.service_name }}
+
+peers:
+  peers:
+    interface: {{ cookiecutter.service_name }}-peer
