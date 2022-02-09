@@ -1,0 +1,17 @@
+type: "charm"
+bases:
+  - build-on:
+    - name: "ubuntu"
+      channel: "20.04"
+    run-on:
+    - name: "ubuntu"
+      channel: "20.04"
+parts:
+  charm:
+    build-packages:
+      - git
+      - libffi-dev
+      - libssl-dev
+    charm-python-packages:
+      - setuptools < 58
+      - cryptography < 3.4

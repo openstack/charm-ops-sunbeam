@@ -113,7 +113,7 @@ Charms
 
 ASO currently provides two base classes to choose from when writing a charm.
 The first is `OSBaseOperatorCharm` and the second, which is derived from the
-first, `OSBaseOperatorAPICharm`. 
+first, `OSBaseOperatorAPICharm`.
 
 The base classes setup a default set of relation handlers (based on what
 relations are present in the charm metadata) and default container handlers.
