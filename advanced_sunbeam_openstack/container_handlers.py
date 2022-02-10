@@ -173,8 +173,9 @@ class PebbleHandler(ops.charm.Object):
             # Not logging the command in case it included a password,
             # too cautious ?
             logger.debug('Command complete')
-            for line in stdout.splitlines():
-                logger.debug('    %s', line)
+            if stdout:
+                for line in stdout.splitlines():
+                    logger.debug('    %s', line)
             return stdout
         except ops.pebble.ExecError as e:
             logger.error('Exited with code %d. Stderr:', e.exit_code)
