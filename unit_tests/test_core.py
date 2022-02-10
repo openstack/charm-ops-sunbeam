@@ -34,11 +34,7 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
 
     def setUp(self) -> None:
         """Charm test class setup."""
-        self.container_calls = {
-            'push': {},
-            'exec': [],
-            'pull': [],
-            'remove_path': []}
+        self.container_calls = test_utils.ContainerCalls()
         super().setUp(sunbeam_charm, self.PATCHES)
         self.harness = test_utils.get_harness(
             test_charms.MyCharm,
@@ -65,8 +61,8 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
         """Test writing config when charm is ready."""
         self.set_pebble_ready()
         self.assertEqual(
-            self.container_calls['push'],
-            {})
+            self.container_calls.push['my-service'],
+            [])
 
     def test_container_names(self) -> None:
         """Test container name list is correct."""
@@ -90,11 +86,7 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         'KubernetesServicePatch')
     def setUp(self, mock_svc_patch: mock.patch) -> None:
         """Charm test class setup."""
-        self.container_calls = {
-            'push': {},
-            'exec': [],
-            'pull': [],
-            'remove_path': []}
+        self.container_calls = test_utils.ContainerCalls()
 
         super().setUp(sunbeam_charm, self.PATCHES)
         self.harness = test_utils.get_harness(
@@ -131,16 +123,21 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             'bar']
         expect_string = '\n' + '\n'.join(expect_entries)
         self.assertEqual(
-            self.container_calls['push']['/etc/my-service/my-service.conf'],
+            self.container_calls.file_update_calls(
+                'my-service',
+                '/etc/my-service/my-service.conf')[0],
             {
+                'path': '/etc/my-service/my-service.conf',
                 'group': 'my-service',
                 'permissions': None,
                 'source': expect_string,
                 'user': 'my-service'})
         self.assertEqual(
-            self.container_calls['push'][
-                '/etc/apache2/sites-available/wsgi-my-service.conf'],
+            self.container_calls.file_update_calls(
+                'my-service',
+                '/etc/apache2/sites-available/wsgi-my-service.conf')[0],
             {
+                'path': '/etc/apache2/sites-available/wsgi-my-service.conf',
                 'group': 'root',
                 'permissions': None,
                 'source': expect_string,
