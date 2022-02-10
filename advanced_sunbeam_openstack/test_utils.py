@@ -26,6 +26,7 @@ import pathlib
 import sys
 import typing
 import unittest
+import collections
 
 from mock import MagicMock, Mock, patch
 
@@ -35,6 +36,48 @@ sys.path.append("src")  # noqa
 from ops import framework, model
 
 from ops.testing import Harness, _TestingModelBackend, _TestingPebbleClient
+
+
+class ContainerCalls:
+    """Object to log container calls."""
+
+    def __init__(self) -> None:
+        """Init container calls."""
+        self.push = collections.defaultdict(list)
+        self.pull = collections.defaultdict(list)
+        self.execute = collections.defaultdict(list)
+        self.remove_path = collections.defaultdict(list)
+
+    def add_push(self, container_name: str, call: typing.Dict) -> None:
+        """Log a push call."""
+        self.push[container_name].append(call)
+
+    def add_pull(self, container_name: str, call: typing.Dict) -> None:
+        """Log a pull call."""
+        self.pull[container_name].append(call)
+
+    def add_execute(self, container_name: str, call: typing.List) -> None:
+        """Log a execute call."""
+        self.execute[container_name].append(call)
+
+    def add_remove_path(self, container_name: str, call: str) -> None:
+        """Log a remove path call."""
+        self.remove_path[container_name].append(call)
+
+    def updated_files(self, container_name: str) -> typing.List:
+        """Return a list of files that have been updated in a container."""
+        return [c['path'] for c in self.push.get(container_name, [])]
+
+    def file_update_calls(
+        self,
+        container_name: str,
+        file_name: str
+    ) -> typing.List:
+        """Return the update call for File_name in container_name."""
+        return [
+            c
+            for c in self.push.get(container_name, [])
+            if c['path'] == file_name]
 
 
 class CharmTestCase(unittest.TestCase):
@@ -218,7 +261,13 @@ def add_all_relations(harness: Harness) -> None:
     """Add all the relations there are test relations for."""
     for key in harness._meta.relations.keys():
         if test_relations.get(key):
-            test_relations['key'](harness)
+            test_relations[key](harness)
+
+
+def set_all_pebbles_ready(harness: Harness) -> None:
+    """Set all known pebble handlers to ready."""
+    for container in harness._meta.containers:
+        harness.container_pebble_ready(container)
 
 
 def get_harness(
@@ -245,22 +294,30 @@ def get_harness(
             group: str = None,
         ) -> None:
             """Capture push events and store in container_calls."""
-            container_calls["push"][path] = {
-                "source": source,
-                "permissions": permissions,
-                "user": user,
-                "group": group,
-            }
+            container_calls.add_push(
+                self.container_name,
+                {
+                    "path": path,
+                    "source": source,
+                    "permissions": permissions,
+                    "user": user,
+                    "group": group,
+                }
+            )
 
         def pull(self, path: str, *, encoding: str = "utf-8") -> None:
             """Capture pull events and store in container_calls."""
-            container_calls["pull"].append(path)
+            container_calls.add_pull(
+                self.container_name,
+                path)
             reader = io.StringIO("0")
             return reader
 
         def remove_path(self, path: str, *, recursive: bool = False) -> None:
             """Capture remove events and store in container_calls."""
-            container_calls["remove_path"].append(path)
+            container_calls.add_remove_path(
+                self.container_name,
+                path)
 
         def exec(
             self,
@@ -280,7 +337,9 @@ def get_harness(
             encoding: str = 'utf-8',
             combine_stderr: bool = False
         ) -> None:
-            container_calls["exec"].append(command)
+            container_calls.add_execute(
+                self.container_name,
+                command)
             process_mock = MagicMock()
             process_mock.wait_output.return_value = (None, None)
             return process_mock
@@ -291,6 +350,9 @@ def get_harness(
             client = self._pebble_clients.get(socket_path, None)
             if client is None:
                 client = _OSTestingPebbleClient(self)
+                # Extract container name from:
+                # /charm/containers/placement-api/pebble.socket
+                client.container_name = socket_path.split('/')[3]
                 self._pebble_clients[socket_path] = client
             return client
 
