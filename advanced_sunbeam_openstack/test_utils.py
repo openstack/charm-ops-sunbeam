@@ -243,6 +243,51 @@ def add_complete_amqp_relation(harness: Harness) -> None:
         add_base_amqp_relation(harness))
 
 
+def add_ceph_relation_credentials(
+    harness: Harness, rel_id: str
+) -> None:
+    """Add amqp data to amqp relation."""
+    # During tests the charm class is never destroyed and recreated as it
+    # would be between hook executions. This means request is never marked
+    # as complete as it never matches the previous request and always looks
+    # like it needs resending.
+    harness.charm.ceph.interface.previous_requests = \
+        harness.charm.ceph.interface.get_previous_requests_from_relations()
+    request = json.loads(
+        harness.get_relation_data(rel_id, harness.charm.unit.name)[
+            'broker_req'])
+    client_unit = harness.charm.unit.name.replace('/', '-')
+    harness.update_relation_data(
+        rel_id,
+        "ceph-mon/0",
+        {
+            'auth': 'cephx',
+            'key': 'AQBUfpVeNl7CHxAA8/f6WTcYFxW2dJ5VyvWmJg==',
+            'ingress-address': '192.0.2.2',
+            'ceph-public-address': '192.0.2.2',
+            f'broker-rsp-{client_unit}': json.dumps({
+                'exit-code': 0,
+                'request-id': request['request-id']})})
+    harness.add_relation_unit(rel_id, "ceph-mon/1")
+
+
+def add_base_ceph_relation(harness: Harness) -> str:
+    """Add identity-service relation."""
+    rel_id = harness.add_relation("ceph", "ceph-mon")
+    harness.add_relation_unit(rel_id, "ceph-mon/0")
+    harness.update_relation_data(
+        rel_id, "ceph-mon/0", {"ingress-address": "10.0.0.33"}
+    )
+    return rel_id
+
+
+def add_complete_ceph_relation(harness: Harness) -> None:
+    """Add complete ceph relation."""
+    add_ceph_relation_credentials(
+        harness,
+        add_base_ceph_relation(harness))
+
+
 def add_complete_peer_relation(harness: Harness) -> None:
     """Add complete peer relation."""
     rel_id = harness.add_relation(
@@ -250,14 +295,14 @@ def add_complete_peer_relation(harness: Harness) -> None:
         harness.charm.app.name)
     new_unit = f"{harness.charm.app.name}/1"
     harness.add_relation_unit(rel_id, new_unit)
-    return rel_id
 
 
 test_relations = {
     'shared-db': add_complete_db_relation,
     'amqp': add_complete_amqp_relation,
     'identity-service': add_complete_identity_relation,
-    'peers': add_complete_peer_relation}
+    'peers': add_complete_peer_relation,
+    'ceph': add_complete_ceph_relation}
 
 
 def add_all_relations(harness: Harness) -> None:
@@ -344,7 +389,7 @@ def get_harness(
                 self.container_name,
                 command)
             process_mock = MagicMock()
-            process_mock.wait_output.return_value = (None, None)
+            process_mock.wait_output.return_value = ('', None)
             return process_mock
 
     class _OSTestingModelBackend(_TestingModelBackend):
