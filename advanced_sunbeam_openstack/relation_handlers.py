@@ -391,7 +391,7 @@ class BasePeerHandler(RelationHandler):
     @property
     def ready(self) -> bool:
         """Whether the handler is complete."""
-        return True
+        return bool(self.interface.peers_rel)
 
     def context(self) -> dict:
         """Return all app data set on the peer relation."""
