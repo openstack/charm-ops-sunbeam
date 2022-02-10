@@ -179,6 +179,48 @@ def add_api_relations(harness: Harness) -> None:
     )
 
 
+def add_complete_db_relation(harness: Harness) -> None:
+    """Add complete DB relation."""
+    add_db_relation_credentials(
+        harness,
+        add_base_db_relation(harness))
+
+
+def add_complete_identity_relation(harness: Harness) -> None:
+    """Add complete Identity relation."""
+    add_identity_service_relation_response(
+        harness,
+        add_base_identity_service_relation(harness))
+
+
+def add_complete_amqp_relation(harness: Harness) -> None:
+    """Add complete AMQP relation."""
+    add_amqp_relation_credentials(
+        harness,
+        add_base_amqp_relation(harness))
+
+
+def add_complete_peer_relation(harness: Harness) -> None:
+    """Add complete peer relation."""
+    harness.add_relation(
+        'peers',
+        harness.charm.app.name)
+
+
+test_relations = {
+    'shared-db': add_complete_db_relation,
+    'amqp': add_complete_amqp_relation,
+    'identity-service': add_complete_identity_relation,
+    'peers': add_complete_peer_relation}
+
+
+def add_all_relations(harness: Harness) -> None:
+    """Add all the relations there are test relations for."""
+    for key in harness._meta.relations.keys():
+        if test_relations.get(key):
+            test_relations['key'](harness)
+
+
 def get_harness(
     charm_class: ops.charm.CharmBase,
     charm_metadata: str = None,
