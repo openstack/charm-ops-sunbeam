@@ -245,9 +245,12 @@ def add_complete_amqp_relation(harness: Harness) -> None:
 
 def add_complete_peer_relation(harness: Harness) -> None:
     """Add complete peer relation."""
-    harness.add_relation(
+    rel_id = harness.add_relation(
         'peers',
         harness.charm.app.name)
+    new_unit = f"{harness.charm.app.name}/1"
+    harness.add_relation_unit(rel_id, new_unit)
+    return rel_id
 
 
 test_relations = {
