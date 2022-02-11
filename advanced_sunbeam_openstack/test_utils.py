@@ -38,6 +38,100 @@ from ops import framework, model
 from ops.testing import Harness, _TestingModelBackend, _TestingPebbleClient
 
 
+TEST_CA = '''-----BEGIN CERTIFICATE-----
+MIIDADCCAeigAwIBAgIUOTGfdiGSlKoiyWskxH1za0Nh7cYwDQYJKoZIhvcNAQEL
+BQAwGjEYMBYGA1UEAwwPRGl2aW5lQXV0aG9yaXR5MB4XDTIyMDIwNjE4MjYyM1oX
+DTMzMDEyMDE4MjYyM1owRTFDMEEGA1UEAxM6VmF1bHQgSW50ZXJtZWRpYXRlIENl
+cnRpZmljYXRlIEF1dGhvcml0eSAoY2hhcm0tcGtpLWxvY2FsKTCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBAMvzFo76z05TU8ECnXpJC2b1mMQK6r5FD+9K
+CwxPUr6l5ar0rm3+CM/MQA0RBrR17Ql8kZab7gSEcVbbUUM825zqoin+ECsaYttb
+kYMHt5lhgEEPwOn9kWC2wh8bBym1eR1zZnpcy0UrclaZByQ7BH+KG3ENi0vozuxp
+xVgQV06wjBC9Bl3WeaUtMiYb/7CqPgTgZPBDL97eae8H3A29U5Xpr/qGf2Gx27pN
+zAyxOsuSDwSB8NrVEZRYAT/kvLku0c/ZmZpU2xIVOOsUkTF+r6b2OfLnqRajl7zs
+KatfnQUb4tCFZ3IO83VvlHS54PxDflTOb5qGSe1r21RTfM9gjmsCAwEAAaMTMBEw
+DwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAUVXG2lGye4RV4NWZ
+rZ6OWmgzy3/wlMKRAt8tXsB2uaFqxg7QzIMfFsLCgRF5xJNS1faHmJIK391or3ip
+ZNgygS4eqWgBqqds60bB4s0JW+QEVfyKeB/tZHm83fZgEypwOs9N0EW/xLslNaFe
+zT8PgdjdzBW80l7KAMy4/GzZvvK7MWfkkhwwnY7oXs9F3q28gFIdcYyc9A1SDg/8
+8jWI6RP5yBcNS/PgUmVV+Ko1uTHxNsKjOn7QPuUgjMBeW0fpBCHVFxz7rs+orHNF
+JSWcYpOxivTh+YO8cAxAGlKzrgZDcXQDjGfF34U/v3niDUHO+CAk6Jz3io4Oxh2X
+GksTPQ==
+-----END CERTIFICATE-----'''
+
+TEST_CHAIN = '''-----BEGIN CERTIFICATE-----
+MIIDADCCAeigAwIBAgIUOTGfdiGSlKoiyWskxH1za0Nh7cYwDQYJKoZIhvcNAQEL
+BQAwGjEYMBYGA1UEAwwPRGl2aW5lQXV0aG9yaXR5MB4XDTIyMDIwNjE4MjYyM1oX
+DTMzMDEyMDE4MjYyM1owRTFDMEEGA1UEAxM6VmF1bHQgSW50ZXJtZWRpYXRlIENl
+cnRpZmljYXRlIEF1dGhvcml0eSAoY2hhcm0tcGtpLWxvY2FsKTCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBAMvzFo76z05TU8ECnXpJC2b1mMQK6r5FD+9K
+CwxPUr6l5ar0rm3+CM/MQA0RBrR17Ql8kZab7gSEcVbbUUM825zqoin+ECsaYttb
+kYMHt5lhgEEPwOn9kWC2wh8bBym1eR1zZnpcy0UrclaZByQ7BH+KG3ENi0vozuxp
+xVgQV06wjBC9Bl3WeaUtMiYb/7CqPgTgZPBDL97eae8H3A29U5Xpr/qGf2Gx27pN
+zAyxOsuSDwSB8NrVEZRYAT/kvLku0c/ZmZpU2xIVOOsUkTF+r6b2OfLnqRajl7zs
+KatfnQUb4tCFZ3IO83VvlHS54PxDflTOb5qGSe1r21RTfM9gjmsCAwEAAaMTMBEw
+DwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAUVXG2lGye4RV4NWZ
+rZ6OWmgzy3/wlMKRAt8tXsB2uaFqxg7QzIMfFsLCgRF5xJNS1faHmJIK391or3ip
+ZNgygS4eqWgBqqds60bB4s0JW+QEVfyKeB/tZHm83fZgEypwOs9N0EW/xLslNaFe
+zT8PgdjdzBW80l7KAMy4/GzZvvK7MWfkkhwwnY7oXs9F3q28gFIdcYyc9A1SDg/8
+8jWI6RP5yBcNS/PgUmVV+Ko1uTHxNsKjOn7QPuUgjMBeW0fpBCHVFxz7rs+orHNF
+JSWcYpOxivTh+YO8cAxAGlKzrgZDcXQDjGfF34U/v3niDUHO+CAk6Jz3io4Oxh2X
+GksTPQ==
+-----END CERTIFICATE-----'''
+
+TEST_SERVER_CERT = '''-----BEGIN CERTIFICATE-----
+MIIEEzCCAvugAwIBAgIUIRVQ0iFgTDBP+Ju6AlcnxTHywUgwDQYJKoZIhvcNAQEL
+BQAwRTFDMEEGA1UEAxM6VmF1bHQgSW50ZXJtZWRpYXRlIENlcnRpZmljYXRlIEF1
+dGhvcml0eSAoY2hhcm0tcGtpLWxvY2FsKTAeFw0yMjAyMDcxODI1NTlaFw0yMzAy
+MDcxNzI2MjhaMCsxKTAnBgNVBAMTIGp1anUtOTNiMDlkLXphemEtYWMzMDBhNjEz
+OTI2LTExMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4VYeKjC3o9GZ
+AnbuVBudyd/a5sHnaGZlMJz8zevhGr5nARRR194bgR8VSB9k1fRbF1Y9WTygBW5a
+iXPy+KbmaD5DsDpJNkF/2zOQDLG9nKmLbamrAcHFU8l8kAVwkdhYgu3T8QbLksoz
+YPiYavg9KfA51wVxTRuUyLpvSLJkc1q0xwuJiE6d46Grdpfyve9cS4G9JxLUL1S9
+HPMIT6rO25AKepPbtGMU/MN/yj/qfqWKga/X/bQzPyQB2UjNFI/0kn3iBi+yJRmI
+3o7ku0exd75eRhMPR7FyG9yfgMroK3FjSJE5fj73akkEd4SW8FgyaeUeoeYxj1G+
+sVaLm6aBbwIDAQABo4IBEzCCAQ8wDgYDVR0PAQH/BAQDAgOoMB0GA1UdJQQWMBQG
+CCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQUBwPuvsOqVMzZke3aVEQTzcXC
+EDwwSgYIKwYBBQUHAQEEPjA8MDoGCCsGAQUFBzAChi5odHRwOi8vMTcyLjIwLjAu
+MjI3OjgyMDAvdjEvY2hhcm0tcGtpLWxvY2FsL2NhMDEGA1UdEQQqMCiCIGp1anUt
+OTNiMDlkLXphemEtYWMzMDBhNjEzOTI2LTExhwSsFABAMEAGA1UdHwQ5MDcwNaAz
+oDGGL2h0dHA6Ly8xNzIuMjAuMC4yMjc6ODIwMC92MS9jaGFybS1wa2ktbG9jYWwv
+Y3JsMA0GCSqGSIb3DQEBCwUAA4IBAQBr3WbXVesJ4R2P1Z67BS+wy9a1JYRLtn7l
+yS+XoEYKhpbxTZh0q74sAhGxoSlvc9GGyeeIsXzndw6pbGyK6WCOmJoelWIYr0Be
+wzSbqkarasPFVpPJnFAGqry6y5B3lZ3OrhHJOIwMSOMQfPt2dSsz+HqfrMwxqAek
+smciCVWqVwN+uq0yqeH5QuACHlkJSV4o/5SkDcFZFaFHuTRqd6hMpczZIw+o+NRn
+OO1YV69oqCCfUE01zlwTF7thZA19xacGS9f8GJO9Ij15MiysZLjxoTfoof/wDdNd
+A0Rs/pW3ja1UfTItPdjC4BgWtQh1a7O9NznrW2L6nRCASI0F1FvQ
+-----END CERTIFICATE-----'''
+
+TEST_SERVER_KEY = '''-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA4VYeKjC3o9GZAnbuVBudyd/a5sHnaGZlMJz8zevhGr5nARRR
+194bgR8VSB9k1fRbF1Y9WTygBW5aiXPy+KbmaD5DsDpJNkF/2zOQDLG9nKmLbamr
+AcHFU8l8kAVwkdhYgu3T8QbLksozYPiYavg9KfA51wVxTRuUyLpvSLJkc1q0xwuJ
+iE6d46Grdpfyve9cS4G9JxLUL1S9HPMIT6rO25AKepPbtGMU/MN/yj/qfqWKga/X
+/bQzPyQB2UjNFI/0kn3iBi+yJRmI3o7ku0exd75eRhMPR7FyG9yfgMroK3FjSJE5
+fj73akkEd4SW8FgyaeUeoeYxj1G+sVaLm6aBbwIDAQABAoIBAQC8O84y/ENLa5lf
+v63TQMaMjp0zyqLeSTsaYumjsvl197vf4POFWhqrwCVs/BylxdwaIIZa9xPNtaOX
+0u4S3Ij4Z5rvqaDi29BMckRQ9mEob1DzqJobe5y1I0kUnhatHobByJ4VZ9HCq3pD
+9SaNpRSi5fPLNNayzOl6zJKNrcfPu1IA085oCzANmFBPM9+3H4xOgIT9f/0ypw24
+F9iZ6SEp6p81iTvlPB7FSLakMAww3V63M9E92drA2sB2veDRfR8/vHoEdL5vhYZU
+v4/GdwzByL2IplJLB1I9fsITzZs9DXdw6+musOq9i8u8R1G6IickPslUegn+PPFR
+vcDP69dxAoGBAP45mzH/qYKhbe9Vf+OJgU0is0gEeixlTeiIFhEU6AjGr7/2rTX5
+7Etzdc0muCc5Atepf82pqoY3Ns8kE/FGbmFJTGTsFIK+GAdMDaH0IDG1zUoBbOqL
+58Xrq42wEX2CuCeCHTiHSVsB4/uY+IfzOa+t+CrwczZl3+i/4PrKCaZ9AoGBAOLo
+4IHmenDgBSbQIWOAaUrO2jTWjsRNIDOO0tfkJCnT/bLgaWK1Lg313gD87PF+/sFM
+6TakFC9e0ieLKDKbT6aML1uF3nTl3qkE2K771PM57w/w3zdPalRbbpTgJc4BWhJc
+iqSPsrUYfHvy5IpbdMnzKRbOGR9Hc6bx3aA+Aw9bAoGAZsHuIyWN5MlPYGAU02nv
+I7iU8tUsdOl1tjnbgYgLyhBVVahllt2wT0caJJQz91ap+XX/vKeJz7pdoxiYHvwy
+/YvdHyX1nGst1zU8hWvh33X2xqUQ2zU1t+BsdVbnmu3Nddq36PN2CR0Yg8fvHTSI
+6qPNHb4XM7O176QvUe98OxkCgYB5AucQf+EWp3I349GaphYBLlXSzgYvjE47ENVD
+C8l5gTQQnHu3h5Z7HX97GWgn1ql4X1MUr+aP6Mq9CgqzCn8s/CAZeEhOIXVgwFPq
+5iUIXgIvhy8T6Ud0m5pazTt8JN5rYm0SHAybZeall8DoRKQBO6vTHLDrLIjyJJUk
+a03odwKBgG454yINXnHPBo9jjcEKwBTaMLH0n25HMJmWaJUnGVmPzrhxHp5xMKZz
+ULTaKTN2gp7E2BuxENtAyplrvLiXXYH3CqT528JgMdMm0al6X3MXo9WqbOg/KNpa
+4JSyyuZ42yGmYlhMCimlk3kVnDxb8PJLWOFnx6f9/i0RWUqnY0nU
+-----END RSA PRIVATE KEY-----'''
+
+
 class ContainerCalls:
     """Object to log container calls."""
 
@@ -83,11 +177,7 @@ class ContainerCalls:
 class CharmTestCase(unittest.TestCase):
     """Class to make mocking easier."""
 
-    container_calls = {
-        'push': {},
-        'pull': [],
-        'exec': [],
-        'remove_path': []}
+    container_calls = ContainerCalls()
 
     def setUp(self, obj: 'typing.ANY', patches: 'typing.List') -> None:
         """Run constructor."""
@@ -224,23 +314,29 @@ def add_api_relations(harness: Harness) -> None:
 
 def add_complete_db_relation(harness: Harness) -> None:
     """Add complete DB relation."""
+    rel_id = add_base_db_relation(harness)
     add_db_relation_credentials(
         harness,
-        add_base_db_relation(harness))
+        rel_id)
+    return rel_id
 
 
 def add_complete_identity_relation(harness: Harness) -> None:
     """Add complete Identity relation."""
+    rel_id = add_base_identity_service_relation(harness)
     add_identity_service_relation_response(
         harness,
-        add_base_identity_service_relation(harness))
+        rel_id)
+    return rel_id
 
 
 def add_complete_amqp_relation(harness: Harness) -> None:
     """Add complete AMQP relation."""
+    rel_id = add_base_amqp_relation(harness)
     add_amqp_relation_credentials(
         harness,
-        add_base_amqp_relation(harness))
+        rel_id)
+    return rel_id
 
 
 def add_ceph_relation_credentials(
@@ -283,9 +379,45 @@ def add_base_ceph_relation(harness: Harness) -> str:
 
 def add_complete_ceph_relation(harness: Harness) -> None:
     """Add complete ceph relation."""
+    rel_id = add_base_ceph_relation(harness)
     add_ceph_relation_credentials(
         harness,
-        add_base_ceph_relation(harness))
+        rel_id)
+    return rel_id
+
+
+def add_certificates_relation_certs(
+    harness: Harness, rel_id: str
+) -> None:
+    """Add cert data to certificates relation."""
+    client_unit = harness.charm.unit.name.replace('/', '_')
+    harness.update_relation_data(
+        rel_id,
+        'vault/0',
+        {
+            f'{client_unit}.server.cert': TEST_SERVER_CERT,
+            f'{client_unit}.server.key': TEST_SERVER_KEY,
+            'chain': TEST_CHAIN,
+            'ca': TEST_CA})
+
+
+def add_base_certificates_relation(harness: Harness) -> str:
+    """Add certificates relation."""
+    rel_id = harness.add_relation("certificates", "vault")
+    harness.add_relation_unit(rel_id, "vault/0")
+    harness.update_relation_data(
+        rel_id, "vault/0", {"ingress-address": "10.0.0.34"}
+    )
+    return rel_id
+
+
+def add_complete_certificates_relation(harness: Harness) -> None:
+    """Add complete certificates relation."""
+    rel_id = add_base_certificates_relation(harness)
+    add_certificates_relation_certs(
+        harness,
+        rel_id)
+    return rel_id
 
 
 def add_complete_peer_relation(harness: Harness) -> None:
@@ -295,6 +427,10 @@ def add_complete_peer_relation(harness: Harness) -> None:
         harness.charm.app.name)
     new_unit = f"{harness.charm.app.name}/1"
     harness.add_relation_unit(rel_id, new_unit)
+    harness.update_relation_data(
+        rel_id, new_unit, {"ingress-address": "10.0.0.35"}
+    )
+    return rel_id
 
 
 test_relations = {
@@ -302,20 +438,34 @@ test_relations = {
     'amqp': add_complete_amqp_relation,
     'identity-service': add_complete_identity_relation,
     'peers': add_complete_peer_relation,
+    'certificates': add_complete_certificates_relation,
     'ceph': add_complete_ceph_relation}
 
 
 def add_all_relations(harness: Harness) -> None:
     """Add all the relations there are test relations for."""
+    rel_ids = {}
     for key in harness._meta.relations.keys():
         if test_relations.get(key):
-            test_relations[key](harness)
+            rel_id = test_relations[key](harness)
+            rel_ids[key] = rel_id
+    return rel_ids
 
 
 def set_all_pebbles_ready(harness: Harness) -> None:
     """Set all known pebble handlers to ready."""
     for container in harness._meta.containers:
         harness.container_pebble_ready(container)
+
+
+def set_remote_leader_ready(
+    harness: Harness,
+    rel_id: int,
+) -> None:
+    """Update relation data to show leader is ready."""
+    harness.update_relation_data(
+        rel_id, harness.charm.app.name, {"leader_ready": "true"}
+    )
 
 
 def get_harness(

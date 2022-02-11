@@ -86,6 +86,8 @@ class OperatorPeers(Object):
     @property
     def _app_data_bag(self) -> typing.Dict[str, str]:
         """Return all app data on peer relation."""
+        if not self.peers_rel:
+            return {}
         return self.peers_rel.data[self.peers_rel.app]
 
     def on_joined(self, event: ops.framework.EventBase) -> None:
