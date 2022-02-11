@@ -2,7 +2,7 @@
 Advanced Sunbeam OpenStack Documentation
 ========================================
 
-Tuturials
+Tutorials
 #########
 
 `Writing an OpenStack API charm with ASO <writing-OS-API-charm.rst>`_.
