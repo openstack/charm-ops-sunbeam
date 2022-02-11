@@ -106,8 +106,15 @@ information:
 
 .. code-block:: none
 
-    Nothing to see here yet.
+    $ juju status cinder
+    Model    Controller  Cloud/Region       Version  SLA          Timestamp
+    sunbeam  maas-one    k8s-cloud/default  2.9.22   unsupported  11:21:51Z
 
+    App     Version  Status   Scale  Charm                    Store  Channel  Rev  OS          Address    Message
+    cinder           waiting      1  sunbeam-cinder-operator  local             0  kubernetes  10.0.0.40  installing agent
+
+    Unit       Workload  Agent  Address      Ports  Message
+    cinder/0*  unknown   idle   10.1.73.176
 
 .. LINKS
 .. _MicroK8S MetalLB add-on: https://microk8s.io/docs/addon-metallba
