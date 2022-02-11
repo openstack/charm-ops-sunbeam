@@ -17,6 +17,8 @@ How-Tos
 
 `How-To write a charm context  <howto-config-context.rst>`_.
 
+`How-To expose services outside of K8S <howto-expose-services.rst>`_.
+
 
 Reference
 #########
