@@ -593,16 +593,17 @@ class CertificatesHandler(RelationHandler):
         sans: List[str] = None,
     ) -> None:
         """Run constructor."""
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        import interface_tls_certificates.ca_client as ca_client
+        self.ca_client = ca_client
         self.sans = sans
         super().__init__(charm, relation_name, callback_f)
 
     def setup_event_handler(self) -> None:
         """Configure event handlers for peer relation."""
         logger.debug("Setting up certificates event handler")
-        # Lazy import to ensure this lib is only required if the charm
-        # has this relation.
-        import interface_tls_certificates.ca_client as ca_client
-        certs = ca_client.CAClient(
+        certs = self.ca_client.CAClient(
             self.charm,
             self.relation_name,
         )
@@ -643,7 +644,7 @@ class CertificatesHandler(RelationHandler):
             root_ca_chain = self.interface.root_ca_chain.public_bytes(
                 encoding=serialization.Encoding.PEM
             )
-        except self.interface.CAClientError:
+        except self.ca_client.CAClientError:
             # A root ca chain is not always available. If configured to just
             # use vault with self-signed certificates, you will not get a ca
             # chain. Instead, you will get a CAClientError being raised. For
