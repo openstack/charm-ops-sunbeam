@@ -75,10 +75,9 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 import logging
-import requests
 
 from ops.framework import (
     StoredState,
@@ -160,7 +159,7 @@ class AMQPRequires(Object):
 
     def _on_amqp_relation_changed(self, event):
         """AMQP relation changed."""
-        logging.debug("RabbitMQAMQPRequires on_changed")
+        logging.debug("RabbitMQAMQPRequires on_changed/departed")
         if self.password:
             self.on.ready.emit()
 
@@ -237,10 +236,11 @@ class AMQPProvides(Object):
     on = AMQPClientEvents()
     _stored = StoredState()
 
-    def __init__(self, charm, relation_name):
+    def __init__(self, charm, relation_name, callback):
         super().__init__(charm, relation_name)
         self.charm = charm
         self.relation_name = relation_name
+        self.callback = callback
         self.framework.observe(
             self.charm.on[relation_name].relation_joined,
             self._on_amqp_relation_joined,
@@ -256,19 +256,24 @@ class AMQPProvides(Object):
 
     def _on_amqp_relation_joined(self, event):
         """Handle AMQP joined."""
-        logging.debug("RabbitMQAMQPProvides on_joined")
+        logging.debug("RabbitMQAMQPProvides on_joined data={}"
+                      .format(event.relation.data))
         self.on.has_amqp_clients.emit()
 
     def _on_amqp_relation_changed(self, event):
         """Handle AMQP changed."""
-        logging.debug("RabbitMQAMQPProvides on_changed")
+        logging.debug("RabbitMQAMQPProvides on_changed data={}"
+                      .format(event.relation.data))
         # Validate data on the relation
         if self.username(event) and self.vhost(event):
             self.on.ready_amqp_clients.emit()
             if self.charm.unit.is_leader():
-                self.set_amqp_credentials(
-                    event, self.username(event), self.vhost(event)
-                )
+                self.callback(event, self.username(event), self.vhost(event))
+        else:
+            logging.warning("Received AMQP changed event without the "
+                            "expected keys ('username', 'vhost') in the "
+                            "application data bag.  Incompatible charm in "
+                            "other end of relation?")
 
     def _on_amqp_relation_broken(self, event):
         """Handle AMQP broken."""
@@ -282,33 +287,3 @@ class AMQPProvides(Object):
     def vhost(self, event):
         """Return the AMQP vhost from the client side of the relation."""
         return event.relation.data[event.relation.app].get("vhost")
-
-    def set_amqp_credentials(self, event, username, vhost):
-        """Set AMQP Credentials.
-
-        :param event: The current event
-        :type EventsBase
-        :param username: The requested username
-        :type username: str
-        :param vhost: The requested vhost
-        :type vhost: str
-        :returns: None
-        :rtype: None
-        """
-        # TODO: Can we move this into the charm code?
-        # TODO TLS Support. Existing interfaces set ssl_port and ssl_ca
-        logging.debug("Setting amqp connection information.")
-        try:
-            if not self.charm.does_vhost_exist(vhost):
-                self.charm.create_vhost(vhost)
-            password = self.charm.create_user(username)
-            self.charm.set_user_permissions(username, vhost)
-            event.relation.data[self.charm.app]["password"] = password
-            event.relation.data[self.charm.app][
-                "hostname"
-            ] = self.charm.hostname
-        except requests.exceptions.ConnectionError as e:
-            logging.warning(
-                "Rabbitmq is not ready. Defering. Errno: {}".format(e.errno)
-            )
-            event.defer()

@@ -110,7 +110,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 "ingress",
                 self.service_name,
                 self.default_public_ingress_port,
-                self.configure_charm,
+                self._ingress_changed,
             )
             handlers.append(self.ingress)
         if self.can_add_handler("peers", handlers):
@@ -188,6 +188,20 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             return pebble_handlers[0]
         else:
             return None
+
+    def _ingress_changed(self, event: ops.framework.EventBase) -> None:
+        """Ingress changed callback.
+
+        Invoked when the data on the ingress relation has changed. This will
+        update the relevant endpoints with the identity service, and then
+        call the configure_charm.
+        """
+        logger.debug('Received an ingress_changed event')
+        if hasattr(self, 'id_svc') and hasattr(self, 'service_endpoints'):
+            logger.debug('Updating service endpoints after ingress relation '
+                         'changed.')
+            self.id_svc.register_services(self.service_endpoints, self.region)
+        self.configure_charm(event)
 
     def configure_charm(self, event: ops.framework.EventBase) -> None:
         """Catchall handler to configure charm services."""
@@ -337,7 +351,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                         logger.warning('DB Sync Out: %s', line.strip())
                 logging.debug(f'Output from database sync: \n{out}')
         else:
-            logger.warn(
+            logger.warning(
                 "Not DB sync ran. Charm does not specify self.db_sync_cmds")
 
     def _do_bootstrap(self) -> None:
@@ -362,7 +376,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         self._state.set_default(db_ready=False)
         self.service_patcher = kube_svc_patch.KubernetesServicePatch(
             self,
-            service_type="LoadBalancer",
             ports=[(f"{self.app.name}", self.default_public_ingress_port)],
         )
 
@@ -375,7 +388,10 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         self, handlers: List[sunbeam_rhandlers.RelationHandler] = None
     ) -> List[sunbeam_rhandlers.RelationHandler]:
         """Relation handlers for the service."""
-        handlers = handlers or []
+        handlers = super().get_relation_handlers(handlers or [])
+        # Note: intentionally get the parent relations first, as the identity
+        # requires handler has an implicit dependency on the ingress relation.
+        # This should be fixed.
         if self.can_add_handler("identity-service", handlers):
             self.id_svc = sunbeam_rhandlers.IdentityServiceRequiresHandler(
                 self,
@@ -385,7 +401,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.model.config["region"],
             )
             handlers.append(self.id_svc)
-        handlers = super().get_relation_handlers(handlers)
         return handlers
 
     def service_url(self, hostname: str) -> str:
@@ -410,14 +425,27 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
             if load_balancer_status:
                 ingress_addresses = load_balancer_status.ingress
                 if ingress_addresses:
+                    logger.debug('Found ingress addresses on loadbalancer '
+                                 'status')
                     ingress_address = ingress_addresses[0]
-                    return ingress_address.hostname or ingress_address.ip
+                    addr = ingress_address.hostname or ingress_address.ip
+                    if addr:
+                        logger.debug('Using ingress address from loadbalancer '
+                                     f'as {addr}')
+                        return ingress_address.hostname or ingress_address.ip
 
-        return None
+        hostname = self.model.get_binding(
+            'identity-service'
+        ).network.ingress_address
+        return hostname
 
     @property
     def public_url(self) -> str:
         """Url for accessing the public endpoint for this service."""
+        if hasattr(self, 'ingress') and self.ingress.url:
+            logger.debug('Ingress relation found, returning ingress.url of: '
+                         f'{self.ingress.url}')
+            return self.ingress.url
         return self.service_url(self.public_ingress_address)
 
     @property

@@ -15,6 +15,7 @@ Import `IngressRequires` in your charm, with two required options:
     - limit-rps
     - limit-whitelist
     - max-body-size
+    - owasp-modsecurity-crs
     - path-routes
     - retry-errors
     - rewrite-enabled
@@ -65,7 +66,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +81,14 @@ OPTIONAL_INGRESS_RELATION_FIELDS = {
     "limit-rps",
     "limit-whitelist",
     "max-body-size",
+    "owasp-modsecurity-crs",
+    "path-routes",
     "retry-errors",
     "rewrite-target",
     "rewrite-enabled",
     "service-namespace",
     "session-cookie-max-age",
     "tls-secret-name",
-    "path-routes",
 }
 
 
@@ -94,10 +96,15 @@ class IngressAvailableEvent(EventBase):
     pass
 
 
+class IngressBrokenEvent(EventBase):
+    pass
+
+
 class IngressCharmEvents(CharmEvents):
     """Custom charm events."""
 
     ingress_available = EventSource(IngressAvailableEvent)
+    ingress_broken = EventSource(IngressBrokenEvent)
 
 
 class IngressRequires(Object):
@@ -134,7 +141,7 @@ class IngressRequires(Object):
             if missing:
                 logger.error(
                     "Ingress relation error, missing required key(s) in config dictionary: %s",
-                    ", ".join(missing),
+                    ", ".join(sorted(missing)),
                 )
                 self.model.unit.status = BlockedStatus(blocked_message)
                 return True
@@ -173,6 +180,7 @@ class IngressProvides(Object):
         # Observe the relation-changed hook event and bind
         # self.on_relation_changed() to handle the event.
         self.framework.observe(charm.on["ingress"].relation_changed, self._on_relation_changed)
+        self.framework.observe(charm.on["ingress"].relation_broken, self._on_relation_broken)
         self.charm = charm
 
     def _on_relation_changed(self, event):
@@ -209,3 +217,11 @@ class IngressProvides(Object):
         # Create an event that our charm can use to decide it's okay to
         # configure the ingress.
         self.charm.on.ingress_available.emit()
+
+    def _on_relation_broken(self, _):
+        """Handle a relation-broken event in the ingress relation."""
+        if not self.model.unit.is_leader():
+            return
+
+        # Create an event that our charm can use to remove the ingress resource.
+        self.charm.on.ingress_broken.emit()

@@ -18,6 +18,7 @@ import json
 import logging
 import cryptography.hazmat.primitives.serialization as serialization
 from typing import Callable, List, Tuple
+from urllib.parse import urlparse
 
 import ops.charm
 import ops.framework
@@ -118,36 +119,37 @@ class IngressHandler(RelationHandler):
         logger.debug("Setting up ingress event handler")
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
-        import charms.nginx_ingress_integrator.v0.ingress as ingress
-        interface = ingress.IngressRequires(self.charm, self.ingress_config)
+        import charms.traefik_k8s.v0.ingress as ingress
+        interface = ingress.IngressPerAppRequirer(
+            self.charm,
+            self.relation_name,
+            port=self.default_public_ingress_port,
+        )
         return interface
-
-    @property
-    def ingress_config(self) -> dict:
-        """Ingress controller configuration dictionary."""
-        # Most charms probably won't (or shouldn't) expose service-port
-        # but use it if its there.
-        port = self.model.config.get(
-            "service-port", self.default_public_ingress_port
-        )
-        svc_hostname = self.model.config.get(
-            "os-public-hostname", self.service_name
-        )
-        return {
-            "service-hostname": svc_hostname,
-            "service-name": self.charm.app.name,
-            "service-port": port,
-        }
 
     @property
     def ready(self) -> bool:
         """Whether the handler is ready for use."""
         # Nothing to wait for
-        return True
+        if self.interface.url:
+            return True
+
+        return False
+
+    @property
+    def url(self) -> str:
+        """Return the URL used by the remote ingress service."""
+        if not self.ready:
+            return None
+
+        return self.interface.url
 
     def context(self) -> dict:
         """Context containing ingress data."""
-        return {}
+        parse_result = urlparse(self.url)
+        return {
+            'ingress_path': parse_result.path,
+        }
 
 
 class DBHandler(RelationHandler):

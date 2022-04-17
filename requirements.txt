@@ -7,3 +7,6 @@ git+https://opendev.org/openstack/charm-ops-openstack#egg=ops_openstack
 git+https://github.com/openstack/charm-ops-interface-ceph-client#egg=interface_ceph_client
 lightkube
 lightkube-models
+
+# included for interfacing with traefik
+serialized-data-interface>=0.4.0

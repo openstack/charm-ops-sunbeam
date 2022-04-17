@@ -96,6 +96,7 @@ requires:
     limit: 1
   ingress:
     interface: ingress
+    limit: 1
   amqp:
     interface: rabbitmq
   identity-service:
