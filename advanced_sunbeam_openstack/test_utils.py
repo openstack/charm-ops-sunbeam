@@ -35,7 +35,12 @@ sys.path.append("src")  # noqa
 
 from ops import framework, model
 
-from ops.testing import Harness, _TestingModelBackend, _TestingPebbleClient
+from ops.testing import (
+    Harness,
+    _TestingModelBackend,
+    _TestingPebbleClient,
+    SIMULATE_CAN_CONNECT,
+)
 
 
 TEST_CA = '''-----BEGIN CERTIFICATE-----
@@ -552,6 +557,7 @@ def get_harness(
                 # /charm/containers/placement-api/pebble.socket
                 client.container_name = socket_path.split('/')[3]
                 self._pebble_clients[socket_path] = client
+            self._pebble_clients_can_connect[client] = not SIMULATE_CAN_CONNECT
             return client
 
         def network_get(
