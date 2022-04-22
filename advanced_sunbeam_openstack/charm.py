@@ -110,7 +110,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 "ingress",
                 self.service_name,
                 self.default_public_ingress_port,
-                self._ingress_changed,
+                self.configure_charm,
             )
             handlers.append(self.ingress)
         if self.can_add_handler("peers", handlers):
@@ -188,20 +188,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             return pebble_handlers[0]
         else:
             return None
-
-    def _ingress_changed(self, event: ops.framework.EventBase) -> None:
-        """Ingress changed callback.
-
-        Invoked when the data on the ingress relation has changed. This will
-        update the relevant endpoints with the identity service, and then
-        call the configure_charm.
-        """
-        logger.debug('Received an ingress_changed event')
-        if hasattr(self, 'id_svc') and hasattr(self, 'service_endpoints'):
-            logger.debug('Updating service endpoints after ingress relation '
-                         'changed.')
-            self.id_svc.register_services(self.service_endpoints, self.region)
-        self.configure_charm(event)
 
     def configure_charm(self, event: ops.framework.EventBase) -> None:
         """Catchall handler to configure charm services."""
@@ -388,10 +374,18 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         self, handlers: List[sunbeam_rhandlers.RelationHandler] = None
     ) -> List[sunbeam_rhandlers.RelationHandler]:
         """Relation handlers for the service."""
-        handlers = super().get_relation_handlers(handlers or [])
-        # Note: intentionally get the parent relations first, as the identity
-        # requires handler has an implicit dependency on the ingress relation.
-        # This should be fixed.
+        handlers = handlers or []
+        # Note: intentionally including the ingress handler here in order to
+        # be able to link the ingress and identity-service handlers.
+        if self.can_add_handler("ingress", handlers):
+            self.ingress = sunbeam_rhandlers.IngressHandler(
+                self,
+                "ingress",
+                self.service_name,
+                self.default_public_ingress_port,
+                self._ingress_changed,
+            )
+            handlers.append(self.ingress)
         if self.can_add_handler("identity-service", handlers):
             self.id_svc = sunbeam_rhandlers.IdentityServiceRequiresHandler(
                 self,
@@ -401,7 +395,22 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.model.config["region"],
             )
             handlers.append(self.id_svc)
-        return handlers
+        return super().get_relation_handlers(handlers)
+
+    def _ingress_changed(self, event: ops.framework.EventBase) -> None:
+        """Ingress changed callback.
+
+        Invoked when the data on the ingress relation has changed. This will
+        update the relevant endpoints with the identity service, and then
+        call the configure_charm.
+        """
+        logger.debug('Received an ingress_changed event')
+        if hasattr(self, 'id_svc') and hasattr(self.id_svc,
+                                               'update_service_endpoints'):
+            logger.debug('Updating service endpoints after ingress relation '
+                         'changed.')
+            self.id_svc.update_service_endpoints(self.service_endpoints)
+        self.configure_charm(event)
 
     def service_url(self, hostname: str) -> str:
         """Service url for accessing this service via the given hostname."""

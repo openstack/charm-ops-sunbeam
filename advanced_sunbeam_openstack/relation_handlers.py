@@ -125,7 +125,22 @@ class IngressHandler(RelationHandler):
             self.relation_name,
             port=self.default_public_ingress_port,
         )
+        _rname = self.relation_name.replace("-", "_")
+        ingress_relation_event = getattr(
+            self.charm.on, f"{_rname}_relation_changed"
+        )
+        self.framework.observe(ingress_relation_event,
+                               self._on_ingress_changed)
         return interface
+
+    def _on_ingress_changed(self, event: ops.framework.EventBase) -> None:
+        """Handle ingress relation changed events."""
+        url = self.url
+        logger.debug(f'Received url: {url}')
+        if not url:
+            return
+
+        self.callback_f(event)
 
     @property
     def ready(self) -> bool:
@@ -349,6 +364,11 @@ class IdentityServiceRequiresHandler(RelationHandler):
         # Ready is only emitted when the interface considers
         # that the relation is complete (indicated by a password)
         self.callback_f(event)
+
+    def update_service_endpoints(self, service_endpoints: dict) -> None:
+        """Update service endpoints on the relation."""
+        self.service_endpoints = service_endpoints
+        self.interface.register_services(service_endpoints, self.region)
 
     @property
     def ready(self) -> bool:
