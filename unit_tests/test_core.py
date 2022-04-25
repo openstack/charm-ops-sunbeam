@@ -47,9 +47,7 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
 
     def set_pebble_ready(self) -> None:
         """Set pebble ready event."""
-        container = self.harness.model.unit.get_container("my-service")
-        # Emit the PebbleReadyEvent
-        self.harness.charm.on.my_service_pebble_ready.emit(container)
+        self.harness.container_pebble_ready('my-service')
 
     def test_pebble_ready_handler(self) -> None:
         """Test is raised and observed."""

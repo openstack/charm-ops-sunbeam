@@ -13,3 +13,5 @@
 # limitations under the License.
 
 """Unit tests for aso."""
+import ops.testing
+ops.testing.SIMULATE_CAN_CONNECT = True
