@@ -14,8 +14,8 @@
 
 """Test aso."""
 
-import mock
 import json
+import mock
 import sys
 
 sys.path.append('lib')  # noqa
@@ -103,11 +103,9 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
 
     def test_write_config(self) -> None:
         """Test when charm is ready configs are written correctly."""
+        test_utils.add_complete_ingress_relation(self.harness)
         self.harness.set_leader()
-        rel_id = self.harness.add_relation('peers', 'my-service')
-        self.harness.add_relation_unit(
-            rel_id,
-            'my-service/1')
+        test_utils.add_complete_peer_relation(self.harness)
         self.set_pebble_ready()
         self.harness.charm.leader_set({'foo': 'bar'})
         test_utils.add_api_relations(self.harness)

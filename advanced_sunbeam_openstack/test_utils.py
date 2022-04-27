@@ -234,6 +234,32 @@ class CharmTestCase(unittest.TestCase):
                 test_file.permissions, permissions)
 
 
+def add_base_ingress_relation(harness: Harness) -> str:
+    """Add ingress relation."""
+    rel_id = harness.add_relation("ingress", "traefik")
+    harness.add_relation_unit(rel_id, "traefik/0")
+    return rel_id
+
+
+def add_ingress_relation_data(harness: Harness, rel_id: str) -> None:
+    """Add ingress data to ingress relation."""
+    harness.update_relation_data(
+        rel_id,
+        "traefik",
+        {
+            "data": '{"ingress": {"url": "http://url"}}',
+            "_supported_versions": yaml.dump(["v1"])})
+
+
+def add_complete_ingress_relation(harness: Harness) -> None:
+    """Add complete Ingress relation."""
+    rel_id = add_base_ingress_relation(harness)
+    add_ingress_relation_data(
+        harness,
+        rel_id)
+    return rel_id
+
+
 def add_base_amqp_relation(harness: Harness) -> str:
     """Add amqp relation."""
     rel_id = harness.add_relation("amqp", "rabbitmq")
