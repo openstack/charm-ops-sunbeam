@@ -94,9 +94,9 @@ requires:
   shared-db:
     interface: mysql_datastore
     limit: 1
-  ingress:
-    interface: ingress
-    limit: 1
+#  ingress:
+#    interface: ingress
+#    limit: 1
   amqp:
     interface: rabbitmq
   identity-service:

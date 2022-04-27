@@ -120,26 +120,21 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             'svcpass1',
             'bar']
         expect_string = '\n' + '\n'.join(expect_entries)
-        self.assertEqual(
-            self.container_calls.file_update_calls(
-                'my-service',
-                '/etc/my-service/my-service.conf')[0],
-            {
-                'path': '/etc/my-service/my-service.conf',
-                'group': 'my-service',
-                'permissions': None,
-                'source': expect_string,
-                'user': 'my-service'})
-        self.assertEqual(
-            self.container_calls.file_update_calls(
-                'my-service',
-                '/etc/apache2/sites-available/wsgi-my-service.conf')[0],
-            {
-                'path': '/etc/apache2/sites-available/wsgi-my-service.conf',
-                'group': 'root',
-                'permissions': None,
-                'source': expect_string,
-                'user': 'root'})
+        self.harness.set_can_connect('my-service', True)
+        self.check_file(
+            'my-service',
+            '/etc/my-service/my-service.conf',
+            contents=expect_string,
+            user='my-service',
+            group='my-service',
+        )
+        self.check_file(
+            'my-service',
+            '/etc/apache2/sites-available/wsgi-my-service.conf',
+            contents=expect_string,
+            user='root',
+            group='root',
+        )
 
     def test__on_database_changed(self) -> None:
         """Test database is requested."""

@@ -16,6 +16,7 @@
 
 import logging
 import os
+from pathlib import Path
 from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -62,6 +63,9 @@ def sidecar_config_render(
         "user": config.user,
         "group": config.group,
         "permissions": config.permissions}
+    parent_dir = str(Path(config.path).parent)
+    if not container.isdir(parent_dir):
+        container.make_dir(parent_dir, make_parents=True)
     container.push(config.path, contents, **kwargs)
     log.debug(
         f"Wrote template {config.path} in container {container.name}."

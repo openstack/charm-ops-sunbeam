@@ -18,7 +18,6 @@
 
 import yaml
 import inspect
-import io
 import json
 import ops
 import os
@@ -209,6 +208,30 @@ class CharmTestCase(unittest.TestCase):
         """Patch all objects in self.patches."""
         for method in self.patches:
             setattr(self, method, self.patch(method))
+
+    def check_file(self, container: str, path: str,
+                   contents: typing.List = None,
+                   user: str = None, group: str = None,
+                   permissions: str = None) -> None:
+        """Check the attributes of a file."""
+        client = self.harness.charm.unit.get_container(container)._pebble
+        files = client.list_files(path, itself=True)
+        self.assertEqual(len(files), 1)
+        test_file = files[0]
+        self.assertEqual(test_file.path, path)
+        if contents:
+            with client.pull(path) as infile:
+                received_data = infile.read()
+            self.assertEqual(contents, received_data)
+        if user:
+            self.assertEqual(
+                test_file.user, user)
+        if group:
+            self.assertEqual(
+                test_file.group, group)
+        if permissions:
+            self.assertEqual(
+                test_file.permissions, permissions)
 
 
 def add_base_amqp_relation(harness: Harness) -> str:
@@ -483,44 +506,6 @@ def get_harness(
     """Return a testing harness."""
 
     class _OSTestingPebbleClient(_TestingPebbleClient):
-        def push(
-            self,
-            path: str,
-            source: typing.Union[bytes, str, typing.BinaryIO, typing.TextIO],
-            *,
-            encoding: str = "utf-8",
-            make_dirs: bool = False,
-            permissions: int = None,
-            user_id: int = None,
-            user: str = None,
-            group_id: int = None,
-            group: str = None,
-        ) -> None:
-            """Capture push events and store in container_calls."""
-            container_calls.add_push(
-                self.container_name,
-                {
-                    "path": path,
-                    "source": source,
-                    "permissions": permissions,
-                    "user": user,
-                    "group": group,
-                }
-            )
-
-        def pull(self, path: str, *, encoding: str = "utf-8") -> None:
-            """Capture pull events and store in container_calls."""
-            container_calls.add_pull(
-                self.container_name,
-                path)
-            reader = io.StringIO("0")
-            return reader
-
-        def remove_path(self, path: str, *, recursive: bool = False) -> None:
-            """Capture remove events and store in container_calls."""
-            container_calls.add_remove_path(
-                self.container_name,
-                path)
 
         def exec(
             self,
