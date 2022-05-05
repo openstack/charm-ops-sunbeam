@@ -620,6 +620,6 @@ def get_harness(
     else:
         defaults = {
             k: v['default']
-            for k, v in yaml.load(charm_config)['options'].items()}
+            for k, v in yaml.safe_load(charm_config)['options'].items()}
         harness.update_config(defaults)
     return harness
