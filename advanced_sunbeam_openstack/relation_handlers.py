@@ -683,3 +683,54 @@ class CertificatesHandler(RelationHandler):
             'cert': cert.decode(),
             'ca_cert': ca_cert.decode()}
         return ctxt
+
+
+class CloudCredentialsRequiresHandler(RelationHandler):
+    """Handles the cloud credentials relation on the requires side."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable,
+    ) -> None:
+        """Create a new cloud-credentials handler.
+
+        Create a new CloudCredentialsRequiresHandler that handles initial
+        events from the relation and invokes the provided callbacks based on
+        the event raised.
+
+        :param charm: the Charm class the handler is for
+        :type charm: ops.charm.CharmBase
+        :param relation_name: the relation the handler is bound to
+        :type relation_name: str
+        :param callback_f: the function to call when the nodes are connected
+        :type callback_f: Callable
+        """
+        super().__init__(charm, relation_name, callback_f)
+
+    def setup_event_handler(self) -> ops.charm.Object:
+        """Configure event handlers for cloud-credentials relation."""
+        import charms.sunbeam_keystone_operator.v0.cloud_credentials as \
+            cloud_credentials
+        logger.debug('Setting up the cloud-credentials event handler')
+        credentials_service = cloud_credentials.CloudCredentialsRequires(
+            self.charm, self.relation_name,
+        )
+        self.framework.observe(
+            credentials_service.on.ready,
+            self._credentials_ready
+        )
+        return credentials_service
+
+    def _credentials_ready(self, event: ops.framework.EventBase) -> None:
+        """React to credential ready event."""
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        """Whether handler is ready for use."""
+        try:
+            return bool(self.interface.password)
+        except AttributeError:
+            return False

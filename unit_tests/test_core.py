@@ -109,6 +109,7 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.set_pebble_ready()
         self.harness.charm.leader_set({'foo': 'bar'})
         test_utils.add_api_relations(self.harness)
+        test_utils.add_complete_cloud_credentials_relation(self.harness)
         expect_entries = [
             '/bin/wsgi_admin',
             'hardpassword',
