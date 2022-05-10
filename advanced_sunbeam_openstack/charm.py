@@ -320,6 +320,11 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """Has the lead unit announced that it is ready."""
         return self.peers.is_leader_ready()
 
+    @property
+    def db_sync_container_name(self) -> str:
+        """Name of Containerto run db sync from."""
+        return self.service_name
+
     def run_db_sync(self) -> None:
         """Run DB sync to init DB.
 
@@ -327,7 +332,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """
         if hasattr(self, 'db_sync_cmds'):
             logger.info("Syncing database...")
-            container = self.unit.get_container(self.wsgi_container_name)
+            container = self.unit.get_container(self.db_sync_container_name)
             for cmd in self.db_sync_cmds:
                 logging.debug(f'Running sync: \n{cmd}')
                 process = container.exec(cmd, timeout=5*60)
@@ -540,3 +545,8 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     def default_public_ingress_port(self) -> int:
         """Port to use for ingress access to service."""
         raise NotImplementedError
+
+    @property
+    def db_sync_container_name(self) -> str:
+        """Name of Containerto run db sync from."""
+        return self.wsgi_container_name
