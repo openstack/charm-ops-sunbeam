@@ -101,6 +101,9 @@ requires:
     interface: rabbitmq
   identity-service:
     interface: keystone
+  cloud-credentials:
+    interface: keystone-credentials
+    limit: 1
 
 peers:
   peers:

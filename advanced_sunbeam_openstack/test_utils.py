@@ -324,6 +324,45 @@ def add_identity_service_relation_response(
     )
 
 
+def add_base_cloud_credentials_relation(harness: Harness) -> str:
+    """Add identity-service relation."""
+    rel_id = harness.add_relation("cloud-credentials", "keystone")
+    harness.add_relation_unit(rel_id, "keystone/0")
+    harness.add_relation_unit(rel_id, "keystone/0")
+    harness.update_relation_data(
+        rel_id, "keystone/0", {"ingress-address": "10.0.0.35"}
+    )
+    return rel_id
+
+
+def add_cloud_credentials_relation_response(
+    harness: Harness, rel_id: str
+) -> None:
+    """Add id service data to identity-service relation."""
+    harness.update_relation_data(
+        rel_id,
+        "keystone",
+        {
+            "api-version": "3",
+            "auth-host": "keystone.local",
+            "auth-port": "12345",
+            "auth-protocol": "http",
+            "internal-host": "keystone.internal",
+            "internal-port": "5000",
+            "internal-protocol": "http",
+            "username": "username",
+            "password": "user-password",
+            "project-name": "user-project",
+            "project-id": "uproj-id",
+            "user-domain-name": "udomain-name",
+            "user-domain-id": "udomain-id",
+            "project-domain-name": "pdomain_-ame",
+            "project-domain-id": "pdomain-id",
+            "region": "region12"
+        },
+    )
+
+
 def add_base_db_relation(harness: Harness) -> str:
     """Add db relation."""
     rel_id = harness.add_relation("shared-db", "mysql")
@@ -379,6 +418,15 @@ def add_complete_identity_relation(harness: Harness) -> None:
     """Add complete Identity relation."""
     rel_id = add_base_identity_service_relation(harness)
     add_identity_service_relation_response(
+        harness,
+        rel_id)
+    return rel_id
+
+
+def add_complete_cloud_credentials_relation(harness: Harness) -> None:
+    """Add complete cloud-credentials relation."""
+    rel_id = add_base_cloud_credentials_relation(harness)
+    add_cloud_credentials_relation_response(
         harness,
         rel_id)
     return rel_id
@@ -491,6 +539,7 @@ test_relations = {
     'shared-db': add_complete_db_relation,
     'amqp': add_complete_amqp_relation,
     'identity-service': add_complete_identity_relation,
+    'cloud-credentials': add_complete_cloud_credentials_relation,
     'peers': add_complete_peer_relation,
     'certificates': add_complete_certificates_relation,
     'ceph': add_complete_ceph_relation}

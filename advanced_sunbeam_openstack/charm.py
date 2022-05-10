@@ -123,6 +123,13 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self, "certificates", self.configure_charm, self.get_sans(),
             )
             handlers.append(self.certs)
+        if self.can_add_handler("cloud-credentials", handlers):
+            self.ccreds = sunbeam_rhandlers.CloudCredentialsRequiresHandler(
+                self,
+                'cloud-credentials',
+                self.configure_charm,
+            )
+            handlers.append(self.ccreds)
         return handlers
 
     def get_sans(self) -> List[str]:
