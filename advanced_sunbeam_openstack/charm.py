@@ -104,15 +104,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self, "shared-db", self.configure_charm, self.databases
             )
             handlers.append(self.db)
-        if self.can_add_handler("ingress", handlers):
-            self.ingress = sunbeam_rhandlers.IngressHandler(
-                self,
-                "ingress",
-                self.service_name,
-                self.default_public_ingress_port,
-                self.configure_charm,
-            )
-            handlers.append(self.ingress)
         if self.can_add_handler("peers", handlers):
             self.peers = sunbeam_rhandlers.BasePeerHandler(
                 self, "peers", self.configure_charm
@@ -337,18 +328,20 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
         :raises: pebble.ExecError
         """
-        if hasattr(self, 'db_sync_cmds'):
-            logger.info("Syncing database...")
-            container = self.unit.get_container(self.db_sync_container_name)
-            for cmd in self.db_sync_cmds:
-                logging.debug(f'Running sync: \n{cmd}')
-                process = container.exec(cmd, timeout=5*60)
-                out, warnings = process.wait_output()
-                if warnings:
-                    for line in warnings.splitlines():
-                        logger.warning('DB Sync Out: %s', line.strip())
-                logging.debug(f'Output from database sync: \n{out}')
-        else:
+        try:
+            if self.db_sync_cmds:
+                logger.info("Syncing database...")
+                container = self.unit.get_container(
+                    self.db_sync_container_name)
+                for cmd in self.db_sync_cmds:
+                    logging.debug('Running sync: \n%s', cmd)
+                    process = container.exec(cmd, timeout=5*60)
+                    out, warnings = process.wait_output()
+                    if warnings:
+                        for line in warnings.splitlines():
+                            logger.warning('DB Sync Out: %s', line.strip())
+                    logging.debug('Output from database sync: \n%s', out)
+        except AttributeError:
             logger.warning(
                 "Not DB sync ran. Charm does not specify self.db_sync_cmds")
 
@@ -389,15 +382,24 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         handlers = handlers or []
         # Note: intentionally including the ingress handler here in order to
         # be able to link the ingress and identity-service handlers.
-        if self.can_add_handler("ingress", handlers):
-            self.ingress = sunbeam_rhandlers.IngressHandler(
+        if self.can_add_handler("ingress-internal", handlers):
+            self.ingress_internal = sunbeam_rhandlers.IngressInternalHandler(
                 self,
-                "ingress",
+                "ingress-internal",
                 self.service_name,
                 self.default_public_ingress_port,
                 self._ingress_changed,
             )
-            handlers.append(self.ingress)
+            handlers.append(self.ingress_internal)
+        if self.can_add_handler("ingress-public", handlers):
+            self.ingress_public = sunbeam_rhandlers.IngressPublicHandler(
+                self,
+                "ingress-public",
+                self.service_name,
+                self.default_public_ingress_port,
+                self._ingress_changed,
+            )
+            handlers.append(self.ingress_public)
         if self.can_add_handler("identity-service", handlers):
             self.id_svc = sunbeam_rhandlers.IdentityServiceRequiresHandler(
                 self,
@@ -417,11 +419,14 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         call the configure_charm.
         """
         logger.debug('Received an ingress_changed event')
-        if hasattr(self, 'id_svc') and hasattr(self.id_svc,
-                                               'update_service_endpoints'):
-            logger.debug('Updating service endpoints after ingress relation '
-                         'changed.')
-            self.id_svc.update_service_endpoints(self.service_endpoints)
+        try:
+            if self.id_svc.update_service_endpoints:
+                logger.debug('Updating service endpoints after ingress '
+                             'relation changed.')
+                self.id_svc.update_service_endpoints(self.service_endpoints)
+        except AttributeError:
+            pass
+
         self.configure_charm(event)
 
     def service_url(self, hostname: str) -> str:
@@ -463,10 +468,15 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     @property
     def public_url(self) -> str:
         """Url for accessing the public endpoint for this service."""
-        if hasattr(self, 'ingress') and self.ingress.url:
-            logger.debug('Ingress relation found, returning ingress.url of: '
-                         f'{self.ingress.url}')
-            return self.ingress.url
+        try:
+            if self.ingress_public.url:
+                logger.debug('Ingress-public relation found, returning '
+                             'ingress-public.url of: %s',
+                             self.ingress_public.url)
+                return self.ingress_public.url
+        except AttributeError:
+            pass
+
         return self.service_url(self.public_ingress_address)
 
     @property
@@ -480,6 +490,15 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     @property
     def internal_url(self) -> str:
         """Url for accessing the internal endpoint for this service."""
+        try:
+            if self.ingress_internal.url:
+                logger.debug('Ingress-internal relation found, returning '
+                             'ingress_internal.url of: %s',
+                             self.ingress_internal.url)
+                return self.ingress_internal.url
+        except AttributeError:
+            pass
+
         hostname = self.model.get_binding(
             "identity-service"
         ).network.ingress_address

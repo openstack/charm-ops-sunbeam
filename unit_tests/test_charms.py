@@ -94,7 +94,10 @@ requires:
   shared-db:
     interface: mysql_datastore
     limit: 1
-  ingress:
+  ingress-internal:
+    interface: ingress
+    limit: 1
+  ingress-public:
     interface: ingress
     limit: 1
   amqp:
