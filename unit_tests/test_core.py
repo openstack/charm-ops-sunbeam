@@ -206,3 +206,32 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.assertFalse(self.harness.charm.is_leader_ready())
         self.harness.charm.set_leader_ready()
         self.assertTrue(self.harness.charm.is_leader_ready())
+
+    def test_endpoint_urls(self) -> None:
+        """Test public_url and internal_url properties."""
+        # Add ingress relation
+        test_utils.add_complete_ingress_relation(self.harness)
+        self.assertEqual(
+            self.harness.charm.internal_url,
+            'http://internal-url')
+        self.assertEqual(
+            self.harness.charm.public_url,
+            'http://public-url')
+
+    @mock.patch('advanced_sunbeam_openstack.charm.Client')
+    def test_endpoint_urls_no_ingress(self, mock_client: mock.patch) -> None:
+        """Test public_url and internal_url with no ingress defined."""
+        class mock_service:
+            """Mock lightkube client service object."""
+
+            def __init__(self) -> None:
+                self.status = None
+
+        mock_client.return_value = mock.MagicMock()
+        mock_client.return_value.get.return_value = mock_service()
+        self.assertEqual(
+            self.harness.charm.internal_url,
+            'http://10.0.0.10:789')
+        self.assertEqual(
+            self.harness.charm.public_url,
+            'http://10.0.0.10:789')

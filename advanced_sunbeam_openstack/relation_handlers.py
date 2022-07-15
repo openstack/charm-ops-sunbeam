@@ -99,18 +99,18 @@ class RelationHandler(ops.charm.Object):
 
 
 class IngressHandler(RelationHandler):
-    """Handler for Ingress relations."""
+    """Base class to handle Ingress relations."""
 
     def __init__(
         self,
         charm: ops.charm.CharmBase,
         relation_name: str,
         service_name: str,
-        default_public_ingress_port: int,
+        default_ingress_port: int,
         callback_f: Callable,
     ) -> None:
         """Run constructor."""
-        self.default_public_ingress_port = default_public_ingress_port
+        self.default_ingress_port = default_ingress_port
         self.service_name = service_name
         super().__init__(charm, relation_name, callback_f)
 
@@ -123,7 +123,7 @@ class IngressHandler(RelationHandler):
         interface = ingress.IngressPerAppRequirer(
             self.charm,
             self.relation_name,
-            port=self.default_public_ingress_port,
+            port=self.default_ingress_port,
         )
         _rname = self.relation_name.replace("-", "_")
         ingress_relation_event = getattr(
@@ -165,6 +165,14 @@ class IngressHandler(RelationHandler):
         return {
             'ingress_path': parse_result.path,
         }
+
+
+class IngressInternalHandler(IngressHandler):
+    """Handler for Ingress relations on internal interface."""
+
+
+class IngressPublicHandler(IngressHandler):
+    """Handler for Ingress relations on public interface."""
 
 
 class DBHandler(RelationHandler):

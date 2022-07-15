@@ -234,30 +234,39 @@ class CharmTestCase(unittest.TestCase):
                 test_file.permissions, permissions)
 
 
-def add_base_ingress_relation(harness: Harness) -> str:
+def add_ingress_relation(harness: Harness, endpoint_type: str) -> str:
     """Add ingress relation."""
-    rel_id = harness.add_relation("ingress", "traefik")
-    harness.add_relation_unit(rel_id, "traefik/0")
+    app_name = 'traefik-' + endpoint_type
+    unit_name = app_name + '/0'
+    rel_name = 'ingress-' + endpoint_type
+    rel_id = harness.add_relation(rel_name, app_name)
+    harness.add_relation_unit(rel_id, unit_name)
     return rel_id
 
 
-def add_ingress_relation_data(harness: Harness, rel_id: str) -> None:
+def add_ingress_relation_data(
+    harness: Harness, rel_id: str, endpoint_type: str
+) -> None:
     """Add ingress data to ingress relation."""
+    app_name = 'traefik-' + endpoint_type
+    url = 'http://' + endpoint_type + "-url"
+    ingress_data = {"ingress": {"url": url}}
     harness.update_relation_data(
         rel_id,
-        "traefik",
+        app_name,
         {
-            "data": '{"ingress": {"url": "http://url"}}',
+            "data": json.dumps(ingress_data),
             "_supported_versions": yaml.dump(["v1"])})
 
 
 def add_complete_ingress_relation(harness: Harness) -> None:
     """Add complete Ingress relation."""
-    rel_id = add_base_ingress_relation(harness)
-    add_ingress_relation_data(
-        harness,
-        rel_id)
-    return rel_id
+    for endpoint_type in ['internal', 'public']:
+        rel_id = add_ingress_relation(harness, endpoint_type)
+        add_ingress_relation_data(
+            harness,
+            rel_id,
+            endpoint_type)
 
 
 def add_base_amqp_relation(harness: Harness) -> str:
