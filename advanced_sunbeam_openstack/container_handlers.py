@@ -28,7 +28,7 @@ import ops.charm
 import ops.pebble
 
 from collections.abc import Callable
-from typing import List
+from typing import List, TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -164,10 +164,20 @@ class PebbleHandler(ops.charm.Object):
         """Determine whether the service the container provides is running."""
         return self._state.service_ready
 
-    def execute(self, cmd: List, exception_on_error: bool = False) -> str:
-        """Execute given command in contianer managed by this handler."""
+    def execute(self, cmd: List, exception_on_error: bool = False,
+                **kwargs: TypedDict) -> str:
+        """Execute given command in container managed by this handler.
+
+        :param cmd: command to execute, specified as a list of strings
+        :param exception_on_error: determines whether or not to raise
+            an exception if the command fails. By default, this method
+            will not raise an exception if the command fails. If it is
+            raised, this will rase an ops.pebble.ExecError.
+        :param kwargs: arguments to pass into the ops.model.Container's
+            execute command.
+        """
         container = self.charm.unit.get_container(self.container_name)
-        process = container.exec(cmd)
+        process = container.exec(cmd, **kwargs)
         try:
             stdout, _ = process.wait_output()
             # Not logging the command in case it included a password,
