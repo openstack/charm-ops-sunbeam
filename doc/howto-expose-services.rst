@@ -16,11 +16,10 @@ is required to the API endpoints from outside of Kubernetes - this
 is used by both end-users of the cloud as well as from machine
 based charms supporting OpenStack Hypervisors.
 
-Operator charms for API or other web services written using Advanced
-Sunbeam OpenStack will automatically patch the Juju created service
-entry to be of type LoadBalancer, enabling Kubernetes to expose the
-service to the outside world using a suitable Load Balancer
-implementation.
+Operator charms for API or other web services written using Sunbeam
+OpenStack will automatically patch the Juju created service entry to
+be of type LoadBalancer, enabling Kubernetes to expose the service to
+the outside world using a suitable Load Balancer implementation.
 
 ++++++++
 MicroK8S

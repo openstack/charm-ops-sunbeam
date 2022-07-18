@@ -18,9 +18,9 @@ import collections
 from typing import Generator, List, TYPE_CHECKING, Tuple, Union
 
 if TYPE_CHECKING:
-    from advanced_sunbeam_openstack.charm import OSBaseOperatorCharm
-    from advanced_sunbeam_openstack.config_contexts import ConfigContext
-    from advanced_sunbeam_openstack.relation_handlers import RelationHandler
+    from ops_sunbeam.charm import OSBaseOperatorCharm
+    from ops_sunbeam.config_contexts import ConfigContext
+    from ops_sunbeam.relation_handlers import RelationHandler
 
 ContainerConfigFile = collections.namedtuple(
     "ContainerConfigFile",

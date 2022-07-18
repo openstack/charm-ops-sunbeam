@@ -24,7 +24,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import advanced_sunbeam_openstack.charm
+    import ops_sunbeam.charm
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class ConfigContext:
 
     def __init__(
         self,
-        charm: "advanced_sunbeam_openstack.charm.OSBaseOperatorCharm",
+        charm: "ops_sunbeam.charm.OSBaseOperatorCharm",
         namespace: str,
     ) -> None:
         """Run constructor."""

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module used to setup the advanced_sunbeam_openstack framework."""
+"""Module used to setup the ops_sunbeam framework."""
 
 from __future__ import print_function
 

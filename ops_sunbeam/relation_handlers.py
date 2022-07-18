@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 import ops.charm
 import ops.framework
 
-import advanced_sunbeam_openstack.interfaces as sunbeam_interfaces
+import ops_sunbeam.interfaces as sunbeam_interfaces
 
 logger = logging.getLogger(__name__)
 

@@ -21,8 +21,8 @@ import sys
 sys.path.append('lib')  # noqa
 sys.path.append('src')  # noqa
 
-import advanced_sunbeam_openstack.charm as sunbeam_charm
-import advanced_sunbeam_openstack.test_utils as test_utils
+import ops_sunbeam.charm as sunbeam_charm
+import ops_sunbeam.test_utils as test_utils
 from . import test_charms
 
 
@@ -218,7 +218,7 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             self.harness.charm.public_url,
             'http://public-url')
 
-    @mock.patch('advanced_sunbeam_openstack.charm.Client')
+    @mock.patch('ops_sunbeam.charm.Client')
     def test_endpoint_urls_no_ingress(self, mock_client: mock.patch) -> None:
         """Test public_url and internal_url with no ingress defined."""
         class mock_service:

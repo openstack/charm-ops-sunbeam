@@ -1,18 +1,18 @@
-============================================
-Advanced Sunbeam OpenStack OPS Charm Anatomy
-============================================
+===================================
+Sunbeam OpenStack OPS Charm Anatomy
+===================================
 
 Overview
 --------
 
-Advanced Sunbeam OpenStack is designed to help with writing charms that
-use the `Charmed Operator Framework <https://juju.is/docs/sdk>`__ and are
+Sunbeam OpenStack is designed to help with writing charms that use the
+`Charmed Operator Framework <https://juju.is/docs/sdk>`__ and are
 deployed on Kubernetes. For the rest of this document when a charm is referred
 to it is implied that it is a Charmed Operator framework charm on Kubernetes.
 
-It general a charm interacts with relations, renders configuration files and manages
-services. ASO gives a charm a consistent way of doing this by implementing
-Container handlers and Relation handlers.
+It general a charm interacts with relations, renders configuration files and
+manages services. Sunbeam Ops gives a charm a consistent way of doing this by
+implementing Container handlers and Relation handlers.
 
 Relation Handlers
 -----------------
