@@ -17,7 +17,7 @@ def start_msg():
 
 def cookie(output_dir, extra_context):
     cookiecutter(
-        'aso_charm/',
+        'sunbeam_charm/',
         extra_context=extra_context,
         output_dir=output_dir)
 

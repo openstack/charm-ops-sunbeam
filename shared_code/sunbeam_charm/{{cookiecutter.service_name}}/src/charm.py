@@ -9,7 +9,7 @@ import logging
 from ops.framework import StoredState
 from ops.main import main
 
-import advanced_sunbeam_openstack.charm as sunbeam_charm
+import ops_sunbeam.charm as sunbeam_charm
 
 logger = logging.getLogger(__name__)
 

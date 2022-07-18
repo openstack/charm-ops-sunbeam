@@ -43,6 +43,8 @@ The charm can append the new context onto those provided by the base class.
 
 .. code:: python
 
+    import ops_sunbeam.charm as sunbeam_charm
+
     class MyCharm(sunbeam_charm.OSBaseOperatorAPICharm):
        """Charm the service."""
 

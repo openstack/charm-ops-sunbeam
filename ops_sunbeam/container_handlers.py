@@ -22,8 +22,8 @@ in the container.
 import collections
 import logging
 
-import advanced_sunbeam_openstack.core as sunbeam_core
-import advanced_sunbeam_openstack.templating as sunbeam_templating
+import ops_sunbeam.core as sunbeam_core
+import ops_sunbeam.templating as sunbeam_templating
 import ops.charm
 import ops.pebble
 

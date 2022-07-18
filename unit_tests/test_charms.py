@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 sys.path.append("unit_tests/lib")  # noqa
 sys.path.append("src")  # noqa
 
-import advanced_sunbeam_openstack.charm as sunbeam_charm
+import ops_sunbeam.charm as sunbeam_charm
 
 CHARM_CONFIG = """
 options:

@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import advanced_sunbeam_openstack.core as sunbeam_core
+    import ops_sunbeam.core as sunbeam_core
     import ops.model
 
 from charmhelpers.contrib.openstack.templating import get_loader

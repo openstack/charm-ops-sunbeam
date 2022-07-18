@@ -15,19 +15,18 @@
 """Base classes for defining a charm using the Operator framework.
 
 This library provided OSBaseOperatorCharm and OSBaseOperatorAPICharm. The
-charm classes use advanced_sunbeam_openstack.relation_handlers.RelationHandler
-objects to interact with relations. These objects also provide contexts which
+charm classes use ops_sunbeam.relation_handlers.RelationHandler objects
+to interact with relations. These objects also provide contexts which
 can be used when defining templates.
 
 In addition to the Relation handlers the charm class can also use
-advanced_sunbeam_openstack.config_contexts.ConfigContext objects which
-can be used when rendering templates, these are not specific to a relation.
+ops_sunbeam.config_contexts.ConfigContext objects which can be
+used when rendering templates, these are not specific to a relation.
 
 The charm class interacts with the containers it is managing via
-advanced_sunbeam_openstack.container_handlers.PebbleHandler. The
-PebbleHandler defines the pebble layers, manages pushing
-configuration to the containers and managing the service running
-in the container.
+ops_sunbeam.container_handlers.PebbleHandler. The PebbleHandler
+defines the pebble layers, manages pushing configuration to the
+containers and managing the service running in the container.
 """
 
 import ipaddress
@@ -42,10 +41,10 @@ import ops.pebble
 from lightkube import Client
 from lightkube.resources.core_v1 import Service
 
-import advanced_sunbeam_openstack.config_contexts as sunbeam_config_contexts
-import advanced_sunbeam_openstack.container_handlers as sunbeam_chandlers
-import advanced_sunbeam_openstack.core as sunbeam_core
-import advanced_sunbeam_openstack.relation_handlers as sunbeam_rhandlers
+import ops_sunbeam.config_contexts as sunbeam_config_contexts
+import ops_sunbeam.container_handlers as sunbeam_chandlers
+import ops_sunbeam.core as sunbeam_core
+import ops_sunbeam.relation_handlers as sunbeam_rhandlers
 
 import charms.observability_libs.v0.kubernetes_service_patch as kube_svc_patch
 

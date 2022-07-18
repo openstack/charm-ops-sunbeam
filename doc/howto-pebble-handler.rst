@@ -20,9 +20,9 @@ other container) then `PebbleHandler` should be used.
 
 .. code:: python
 
-    import container_handlers
+    import ops_sunbeam.container_handlers as sunbeam_chandlers
 
-    class MyServicePebbleHandler(container_handlers.ServicePebbleHandler):
+    class MyServicePebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
         """Manage MyService Container."""
 
 The handlers can create directories in the container once the pebble is
