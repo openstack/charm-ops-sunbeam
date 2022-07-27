@@ -648,7 +648,11 @@ def get_harness(
             return network_data
 
     filename = inspect.getfile(charm_class)
-    charm_dir = pathlib.Path(filename).parents[1]
+    # Use pathlib.Path(filename).parents[1] if tests structure is
+    # <charm>/unit_tests
+    # Use pathlib.Path(filename).parents[2] if tests structure is
+    # <charm>/tests/unit/
+    charm_dir = pathlib.Path(filename).parents[2]
 
     if not charm_metadata:
         metadata_file = f"{charm_dir}/metadata.yaml"
