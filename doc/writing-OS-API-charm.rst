@@ -24,8 +24,8 @@ Add ASO common files to new charm. The script will ask a few basic questions:
 
 .. code:: bash
 
-    git clone https://github.com/openstack-charmers/advanced-sunbeam-openstack
-    cd advanced-sunbeam-openstack
+    git clone https://opendev.org/openstack/charm-ops-sunbeam
+    cd charm-ops-sunbeam
     ./sunbeam-charm-init.sh ~/branches/charm-ironic-operator
 
     This tool is designed to be used after 'charmcraft init' was initially run

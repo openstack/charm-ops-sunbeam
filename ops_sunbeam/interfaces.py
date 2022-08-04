@@ -27,7 +27,7 @@ from ops.framework import StoredState
 
 
 class PeersRelationCreatedEvent(EventBase):
-    """The PeersRelationCreatedEvent indicates that the peer relation now exists.
+    """The PeersRelationCreatedEvent indicates that peer relation now exists.
 
     It does not indicate that any peers are available or have joined, simply
     that the relation exists. This is useful to to indicate that the
