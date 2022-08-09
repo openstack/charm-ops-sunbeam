@@ -1,0 +1,139 @@
+bundle: kubernetes
+applications:
+  traefik:
+    charm: traefik-k8s
+    channel: beta
+    scale: 1
+    trust: true
+  traefik-public:
+    charm: traefik-k8s
+    channel: beta
+    scale: 1
+    trust: true
+    options:
+      kubernetes-service-annotations: metallb.universe.tf/address-pool=public
+  mysql:
+    charm: sunbeam-mysql-k8s
+    channel: beta
+    scale: 1
+    trust: false
+    resources:
+      mysql-image: ubuntu/mysql:latest
+  rabbitmq:
+    charm: sunbeam-rabbitmq-operator
+    channel: edge
+    scale: 1
+    trust: true
+  keystone:
+    charm: ch:keystone-k8s
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      admin-role: admin
+    storage:
+      fernet-keys: 5M
+      credential-keys: 5M
+  glance:
+    charm: ch:glance-k8s
+    channel: edge
+    scale: 1
+    trust: true
+    storage:
+      local-repository: 5G
+  nova:
+    charm: ch:nova-k8s
+    channel: edge
+    scale: 1
+    trust: true
+  placement:
+    charm: ch:placement-k8s
+    channel: edge
+    scale: 1
+    trust: true
+  neutron:
+    charm: ch:neutron-k8s
+    channel: edge
+    scale: 1
+    trust: true
+    options:
+      os-public-hostname:
+  ovn-central:
+    charm: ch:ovn-central-k8s
+    channel: edge
+    scale: 1
+    trust: true
+  nova-compute:
+    charm: ch:sunbeam-nova-compute-operator
+    channel: edge
+    scale: 1
+    trust: true
+  vault:
+    charm: icey-vault-k8s
+    channel: stable
+    scale: 1
+    resources:
+      vault-image: vault
+relations:
+- - mysql:database
+  - keystone:shared-db
+- - traefik:ingress
+  - keystone:ingress-internal
+- - traefik-public:ingress
+  - keystone:ingress-public
+
+- - mysql:database
+  - glance:shared-db
+- - rabbitmq:amqp
+  - glance:amqp
+- - keystone:identity-service
+  - glance:identity-service
+- - traefik:ingress
+  - glance:ingress-internal
+- - traefik-public:ingress
+  - glance:ingress-public
+
+- - mysql:database
+  - nova:shared-db
+- - rabbitmq:amqp
+  - nova:amqp
+- - keystone:identity-service
+  - nova:identity-service
+- - traefik:ingress
+  - nova:ingress-internal
+- - traefik-public:ingress
+  - nova:ingress-public
+
+- - mysql:database
+  - placement:shared-db
+- - keystone:identity-service
+  - placement:identity-service
+- - traefik:ingress
+  - placement:ingress-internal
+- - traefik-public:ingress
+  - placement:ingress-public
+
+- - mysql:database
+  - neutron:shared-db
+- - rabbitmq:amqp
+  - neutron:amqp
+- - keystone:identity-service
+  - neutron:identity-service
+- - traefik:ingress
+  - neutron:ingress-internal
+- - traefik-public:ingress
+  - neutron:ingress-public
+- - vault:insecure-certificates
+  - neutron:certificates
+- - neutron:ovsdb-cms
+  - ovn-central:ovsdb-cms
+
+- - vault:insecure-certificates
+  - ovn-central:certificates
+
+- - rabbitmq:amqp
+  - nova-compute:amqp
+- - keystone:identity-credentials
+  - nova-compute:cloud-credentials
+- - nova:cloud-compute
+  - nova-compute:cloud-compute
