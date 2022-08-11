@@ -52,7 +52,7 @@ def guard(
     It also handles errors which can be interpreted as a Block rather than the
     charm going into error.
 
-    :param charm: the charm class (so that unit status can be set)
+    :param charm: the charm class (so that status can be set)
     :param section: the name of the section (for debugging/info purposes)
     :handle_exception: whether to handle the exception to a BlockedStatus()
     :log_traceback: whether to log the traceback for debugging purposes.
@@ -72,7 +72,7 @@ def guard(
         logger.warning(
             "Charm is blocked in section '%s' due to '%s'", section, str(e)
         )
-        charm.unit.status = BlockedStatus(e.msg)
+        charm.status.set(BlockedStatus(e.msg))
     except Exception as e:
         # something else went wrong
         if handle_exception:
@@ -83,8 +83,8 @@ def guard(
                 import traceback
 
                 logging.error(traceback.format_exc())
-                charm.unit.status = BlockedStatus(
+                charm.status.set(BlockedStatus(
                     "Error in charm (see logs): {}".format(str(e))
-                )
+                ))
             return
         raise

@@ -38,9 +38,12 @@ import ops.framework
 import ops.model
 import ops.pebble
 
+from ops.model import ActiveStatus
+
 from lightkube import Client
 from lightkube.resources.core_v1 import Service
 
+import ops_sunbeam.compound_status as compound_status
 import ops_sunbeam.config_contexts as sunbeam_config_contexts
 import ops_sunbeam.container_handlers as sunbeam_chandlers
 import ops_sunbeam.core as sunbeam_core
@@ -62,12 +65,14 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
     def __init__(self, framework: ops.framework.Framework) -> None:
         """Run constructor."""
         super().__init__(framework)
+
+        self.status = compound_status.Status("workload", priority=100)
+        self.status_pool = compound_status.StatusPool(self)
+        self.status_pool.add(self.status)
         self._state.set_default(bootstrapped=False)
         self.relation_handlers = self.get_relation_handlers()
         self.pebble_handlers = self.get_pebble_handlers()
         self.framework.observe(self.on.config_changed, self._on_config_changed)
-        # TODO: change update_status based on compound_status feature
-        self.framework.observe(self.on.update_status, self._on_update_status)
 
     def can_add_handler(
         self,
@@ -258,7 +263,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         for ph in self.pebble_handlers:
             ph.add_healthchecks()
 
-        self.unit.status = ops.model.ActiveStatus()
+        self.status.set(ActiveStatus(""))
         self._state.bootstrapped = True
 
     @property
@@ -424,22 +429,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             for line in e.stderr.splitlines():
                 logger.error('    %s', line)
             return False
-
-    def _on_update_status(self, event: ops.framework.EventBase) -> None:
-        """Update status event handler."""
-        status = []
-        for ph in self.pebble_handlers:
-            ph.assess_status()
-            # Below lines are not required with compound status feature
-            if ph.status:
-                status.append(ph.status)
-
-        # Need to be changed once compound status in place
-        if len(status) == 0:
-            self.unit.status = ops.model.ActiveStatus()
-        else:
-            status_msg = ','.join(status)
-            self.unit.status = ops.model.BlockedStatus(status_msg)
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):

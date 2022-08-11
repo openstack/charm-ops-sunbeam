@@ -22,8 +22,10 @@ from urllib.parse import urlparse
 
 import ops.charm
 import ops.framework
+from ops.model import BlockedStatus, ActiveStatus, WaitingStatus, UnknownStatus
 
 import ops_sunbeam.interfaces as sunbeam_interfaces
+import ops_sunbeam.compound_status as compound_status
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,27 @@ class RelationHandler(ops.charm.Object):
         self.callback_f = callback_f
         self.interface = self.setup_event_handler()
         self.mandatory = mandatory
+        status = compound_status.Status(self.relation_name)
+        self.charm.status_pool.add(status)
+        self.set_status(status)
+
+    def set_status(self, status: compound_status.Status) -> None:
+        """
+        Set the status based on current state.
+
+        Will be called once, during construction,
+        after everything else is initialised.
+        Override this in a child class if custom logic should be used.
+        """
+        if not self.model.relations.get(self.relation_name):
+            if self.mandatory:
+                status.set(BlockedStatus("relation missing"))
+            else:
+                status.set(UnknownStatus())
+        elif self.ready:
+            status.set(ActiveStatus(""))
+        else:
+            status.set(WaitingStatus("relation incomplete"))
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for the relation.

@@ -49,7 +49,7 @@ class ApplicationCharm(CharmBase):
         self._start_application(config_file)
 
         # Set active status
-        self.unit.status = ActiveStatus("received database credentials")
+        self.status.set(ActiveStatus("received database credentials"))
 ```
 
 As shown above, the library provides some custom events to handle specific situations,
