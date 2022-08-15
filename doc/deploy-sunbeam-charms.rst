@@ -57,7 +57,7 @@ Run below commands to install juju controller on microk8s
 Deploy Sunbeam charms
 ~~~~~~~~~~~~~~~~~~~~~
 
-Sample `sunbeam bundle`_ to deploy.
+See ./reference-bundles.rst for information about example bundles available here.
 
 To use locally built charms, update the following in the bundle
 
@@ -69,7 +69,7 @@ Run below commands to deploy the bundle
 .. code-block:: bash
 
    juju add-model sunbeam
-   juju deploy ./sunbeam.yaml --trust
+   juju deploy ./doc/bundles/full.yaml --trust
 
 Check ``juju status`` and wait for all units to be active.
 
@@ -82,27 +82,12 @@ Testing OpenStack Control plane
 
    sudo snap install openstackclients --channel xena/stable
 
-2. Setup novarc file
-
-a. Get keystone service ip
+2. Generate and source the openrc file.  (This example requires ``jq`` to be installed.)
 
 .. code-block:: bash
 
-   juju status keystone | grep keystone-k8s | awk '{print $6}'
-
-
-b. Update sample novarc file with proper OS_AUTH_URL
-
-.. code-block:: bash
-
-   export OS_AUTH_VERSION=3
-   export OS_AUTH_URL=http://10.152.183.109:5000/v3
-   export OS_PROJECT_DOMAIN_NAME=admin_domain
-   export OS_USERNAME=admin
-   export OS_USER_DOMAIN_NAME=admin_domain
-   export OS_PROJECT_NAME=admin
-   export OS_PASSWORD=abc123
-   export OS_IDENTITY_API_VERSION=3
+    juju run-action --wait keystone/leader get-admin-account --format json | jq -r '.[].results.openrc' > openrc
+    source ./openrc
 
 3. Run some openstack commands
 
@@ -115,4 +100,3 @@ support bringing up ovn-controller.
 
 
 .. _`juju with microk8s cloud`: https://juju.is/docs/olm/microk8s
-.. _`sunbeam bundle`: https://opendev.org/openstack/charm-ops-sunbeam/src/branch/main/doc/sunbeam.yaml
