@@ -66,6 +66,8 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self.relation_handlers = self.get_relation_handlers()
         self.pebble_handlers = self.get_pebble_handlers()
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        # TODO: change update_status based on compound_status feature
+        self.framework.observe(self.on.update_status, self._on_update_status)
 
     def can_add_handler(
         self,
@@ -235,6 +237,10 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             if self.unit.is_leader() and self.supports_peer_relation:
                 self.set_leader_ready()
 
+        # Add healthchecks to the plan
+        for ph in self.pebble_handlers:
+            ph.add_healthchecks()
+
         self.unit.status = ops.model.ActiveStatus()
         self._state.bootstrapped = True
 
@@ -394,6 +400,22 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 logger.error('    %s', line)
             self._state.bootstrapped = False
             return
+
+    def _on_update_status(self, event: ops.framework.EventBase) -> None:
+        """Update status event handler."""
+        status = []
+        for ph in self.pebble_handlers:
+            ph.assess_status()
+            # Below lines are not required with compound status feature
+            if ph.status:
+                status.append(ph.status)
+
+        # Need to be changed once compound status in place
+        if len(status) == 0:
+            self.unit.status = ops.model.ActiveStatus()
+        else:
+            status_msg = ','.join(status)
+            self.unit.status = ops.model.BlockedStatus(status_msg)
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
@@ -623,3 +645,8 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     def db_sync_container_name(self) -> str:
         """Name of Containerto run db sync from."""
         return self.wsgi_container_name
+
+    @property
+    def healthcheck_http_url(self) -> str:
+        """Healthcheck HTTP URL for the service."""
+        return f'http://localhost:{self.default_public_ingress_port}/'
