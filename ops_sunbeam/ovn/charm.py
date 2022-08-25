@@ -31,7 +31,10 @@ class OSBaseOVNOperatorCharm(sunbeam_charm.OSBaseOperatorCharm):
         handlers = handlers or []
         if self.can_add_handler("ovsdb-cms", handlers):
             self.ovsdb_cms = ovn_relation_handlers.OVSDBCMSRequiresHandler(
-                self, "ovsdb-cms", self.configure_charm,
+                self,
+                "ovsdb-cms",
+                self.configure_charm,
+                "ovsdb-cms" in self.mandatory_relations,
             )
             handlers.append(self.ovsdb_cms)
         handlers = super().get_relation_handlers(handlers)

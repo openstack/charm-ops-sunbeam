@@ -250,3 +250,53 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         self.assertEqual(
             self.harness.charm.public_url,
             'http://10.0.0.10:789')
+
+    def test_relation_handlers_ready(self) -> None:
+        """Test relation handlers are ready."""
+        # Add all mandatory relations and test relation_handlers_ready
+        db_rel_id = test_utils.add_base_db_relation(self.harness)
+        test_utils.add_db_relation_credentials(self.harness, db_rel_id)
+        self.assertFalse(
+            self.harness.charm.relation_handlers_ready())
+
+        amqp_rel_id = test_utils.add_base_amqp_relation(self.harness)
+        test_utils.add_amqp_relation_credentials(self.harness, amqp_rel_id)
+        self.assertFalse(
+            self.harness.charm.relation_handlers_ready())
+
+        identity_rel_id = test_utils.add_base_identity_service_relation(
+            self.harness)
+        test_utils.add_identity_service_relation_response(
+            self.harness, identity_rel_id)
+        self.assertFalse(
+            self.harness.charm.relation_handlers_ready())
+
+        ingress_rel_id = test_utils.add_ingress_relation(
+            self.harness, 'public')
+        test_utils.add_ingress_relation_data(
+            self.harness, ingress_rel_id, 'public')
+        self.assertTrue(
+            self.harness.charm.relation_handlers_ready())
+
+        # Add an optional relation and test if relation_handlers_ready
+        # returns True
+        optional_rel_id = test_utils.add_ingress_relation(
+            self.harness, 'internal')
+        test_utils.add_ingress_relation_data(
+            self.harness, optional_rel_id, 'internal')
+        self.assertTrue(
+            self.harness.charm.relation_handlers_ready())
+
+        # Remove a mandatory relation and test if relation_handlers_ready
+        # returns False
+        self.harness.remove_relation(ingress_rel_id)
+        self.assertFalse(
+            self.harness.charm.relation_handlers_ready())
+
+        # Add the mandatory relation back and retest relation_handlers_ready
+        ingress_rel_id = test_utils.add_ingress_relation(
+            self.harness, 'public')
+        test_utils.add_ingress_relation_data(
+            self.harness, ingress_rel_id, 'public')
+        self.assertTrue(
+            self.harness.charm.relation_handlers_ready())

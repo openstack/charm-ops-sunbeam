@@ -50,6 +50,7 @@ class RelationHandler(ops.charm.Object):
         charm: ops.charm.CharmBase,
         relation_name: str,
         callback_f: Callable,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
         super().__init__(
@@ -62,6 +63,7 @@ class RelationHandler(ops.charm.Object):
         self.relation_name = relation_name
         self.callback_f = callback_f
         self.interface = self.setup_event_handler()
+        self.mandatory = mandatory
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for the relation.
@@ -113,11 +115,12 @@ class IngressHandler(RelationHandler):
         service_name: str,
         default_ingress_port: int,
         callback_f: Callable,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
         self.default_ingress_port = default_ingress_port
         self.service_name = service_name
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Ingress relation."""
@@ -202,11 +205,12 @@ class DBHandler(RelationHandler):
         relation_name: str,
         callback_f: Callable,
         database: str,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
         # a database name as requested by the charm.
         self.database_name = database
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for a MySQL relation."""
@@ -316,11 +320,12 @@ class AMQPHandler(RelationHandler):
         callback_f: Callable,
         username: str,
         vhost: int,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
         self.username = username
         self.vhost = vhost
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an AMQP relation."""
@@ -388,11 +393,12 @@ class IdentityServiceRequiresHandler(RelationHandler):
         callback_f: Callable,
         service_endpoints: dict,
         region: str,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
         self.service_endpoints = service_endpoints
         self.region = region
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Identity service relation."""
@@ -514,12 +520,13 @@ class CephClientHandler(RelationHandler):
         relation_name: str,
         callback_f: Callable,
         allow_ec_overwrites: bool = True,
-        app_name: str = None
+        app_name: str = None,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
         self.allow_ec_overwrites = allow_ec_overwrites
         self.app_name = app_name
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an ceph-client interface."""
@@ -662,6 +669,7 @@ class CertificatesHandler(RelationHandler):
         relation_name: str,
         callback_f: Callable,
         sans: List[str] = None,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
         # Lazy import to ensure this lib is only required if the charm
@@ -669,7 +677,7 @@ class CertificatesHandler(RelationHandler):
         import interface_tls_certificates.ca_client as ca_client
         self.ca_client = ca_client
         self.sans = sans
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> None:
         """Configure event handlers for peer relation."""
@@ -742,6 +750,7 @@ class CloudCredentialsRequiresHandler(RelationHandler):
         charm: ops.charm.CharmBase,
         relation_name: str,
         callback_f: Callable,
+        mandatory: bool = False,
     ) -> None:
         """Create a new cloud-credentials handler.
 
@@ -756,7 +765,7 @@ class CloudCredentialsRequiresHandler(RelationHandler):
         :param callback_f: the function to call when the nodes are connected
         :type callback_f: Callable
         """
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for cloud-credentials relation."""

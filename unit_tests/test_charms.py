@@ -203,6 +203,9 @@ class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
     service_name = "my-service"
     wsgi_admin_script = "/bin/wsgi_admin"
     wsgi_public_script = "/bin/wsgi_public"
+    mandatory_relations = {
+        "database", "amqp", "identity-service", "ingress-public"
+    }
 
     def __init__(self, framework: "ops.framework.Framework") -> None:
         """Run constructor."""

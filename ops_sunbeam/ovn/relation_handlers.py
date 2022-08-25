@@ -332,10 +332,11 @@ class OVSDBCMSProvidesHandler(sunbeam_rhandlers.RelationHandler,
         self,
         charm: ops.charm.CharmBase,
         relation_name: str,
-        callback_f: Callable
+        callback_f: Callable,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Identity service relation."""
@@ -376,10 +377,11 @@ class OVSDBCMSRequiresHandler(sunbeam_rhandlers.RelationHandler,
         self,
         charm: ops.charm.CharmBase,
         relation_name: str,
-        callback_f: Callable
+        callback_f: Callable,
+        mandatory: bool = False,
     ) -> None:
         """Run constructor."""
-        super().__init__(charm, relation_name, callback_f)
+        super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Identity service relation."""

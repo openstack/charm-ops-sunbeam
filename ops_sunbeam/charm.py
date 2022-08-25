@@ -56,6 +56,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     _state = ops.framework.StoredState()
 
+    # Holds set of mandatory relations
+    mandatory_relations = set()
+
     def __init__(self, framework: ops.framework.Framework) -> None:
         """Run constructor."""
         super().__init__(framework)
@@ -96,6 +99,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.configure_charm,
                 self.config.get("rabbit-user") or self.service_name,
                 self.config.get("rabbit-vhost") or "openstack",
+                "amqp" in self.mandatory_relations,
             )
             handlers.append(self.amqp)
 
@@ -103,18 +107,26 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         for relation_name, database_name in self.databases.items():
             if self.can_add_handler(relation_name, handlers):
                 db = sunbeam_rhandlers.DBHandler(
-                    self, relation_name, self.configure_charm, database_name,
+                    self,
+                    relation_name,
+                    self.configure_charm,
+                    database_name,
+                    relation_name in self.mandatory_relations,
                 )
                 self.dbs[relation_name] = db
                 handlers.append(db)
         if self.can_add_handler("peers", handlers):
             self.peers = sunbeam_rhandlers.BasePeerHandler(
-                self, "peers", self.configure_charm
+                self, "peers", self.configure_charm, False
             )
             handlers.append(self.peers)
         if self.can_add_handler("certificates", handlers):
             self.certs = sunbeam_rhandlers.CertificatesHandler(
-                self, "certificates", self.configure_charm, self.get_sans(),
+                self,
+                "certificates",
+                self.configure_charm,
+                self.get_sans(),
+                "certificates" in self.mandatory_relations,
             )
             handlers.append(self.certs)
         if self.can_add_handler("cloud-credentials", handlers):
@@ -122,6 +134,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self,
                 'cloud-credentials',
                 self.configure_charm,
+                'cloud-credentials' in self.mandatory_relations,
             )
             handlers.append(self.ccreds)
         return handlers
@@ -292,10 +305,18 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def relation_handlers_ready(self) -> bool:
         """Determine whether all relations are ready for use."""
-        for handler in self.relation_handlers:
-            if not handler.ready:
-                logger.info(f"Relation {handler.relation_name} incomplete")
-                return False
+        ready_relations = {
+            handler.relation_name
+            for handler in self.relation_handlers
+            if handler.mandatory and handler.ready
+        }
+        not_ready_relations = self.mandatory_relations.difference(
+            ready_relations)
+
+        if len(not_ready_relations) != 0:
+            logger.info(f"Relations {not_ready_relations} incomplete")
+            return False
+
         return True
 
     def contexts(self) -> sunbeam_core.OPSCharmContexts:
@@ -378,6 +399,12 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     """Base class for OpenStack API operators."""
 
+    mandatory_relations = {
+        'database',
+        'identity-service',
+        'ingress-public'
+    }
+
     def __init__(self, framework: ops.framework.Framework) -> None:
         """Run constructor."""
         super().__init__(framework)
@@ -406,6 +433,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.service_name,
                 self.default_public_ingress_port,
                 self._ingress_changed,
+                "ingress-internal" in self.mandatory_relations,
             )
             handlers.append(self.ingress_internal)
         if self.can_add_handler("ingress-public", handlers):
@@ -415,6 +443,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.service_name,
                 self.default_public_ingress_port,
                 self._ingress_changed,
+                "ingress-public" in self.mandatory_relations,
             )
             handlers.append(self.ingress_public)
         if self.can_add_handler("identity-service", handlers):
@@ -424,6 +453,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.configure_charm,
                 self.service_endpoints,
                 self.model.config["region"],
+                "identity-service" in self.mandatory_relations,
             )
             handlers.append(self.id_svc)
         return super().get_relation_handlers(handlers)
