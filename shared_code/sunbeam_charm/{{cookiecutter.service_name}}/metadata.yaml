@@ -23,8 +23,8 @@ resources:
     description: OCI image for OpenStack {{ cookiecutter.service_name }}
 
 requires:
-  shared-db:
-    interface: mysql_datastore
+  database:
+    interface: mysql_client
     limit: 1
   identity-service:
     interface: keystone

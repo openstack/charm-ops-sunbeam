@@ -52,7 +52,12 @@ class RelationHandler(ops.charm.Object):
         callback_f: Callable,
     ) -> None:
         """Run constructor."""
-        super().__init__(charm, None)
+        super().__init__(
+            charm,
+            # Ensure we can have multiple instances of a relation handler,
+            # but only one per relation.
+            key=type(self).__name__ + '_' + relation_name
+        )
         self.charm = charm
         self.relation_name = relation_name
         self.callback_f = callback_f
@@ -183,84 +188,107 @@ class DBHandler(RelationHandler):
         charm: ops.charm.CharmBase,
         relation_name: str,
         callback_f: Callable,
-        databases: List[str] = None,
+        database: str,
     ) -> None:
         """Run constructor."""
-        self.databases = databases
+        # a database name as requested by the charm.
+        self.database_name = database
         super().__init__(charm, relation_name, callback_f)
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for a MySQL relation."""
         logger.debug("Setting up DB event handler")
-        # Lazy import to ensure this lib is only required if the charm
-        # has this relation.
-        import charms.sunbeam_mysql_k8s.v0.mysql as mysql
-        db = mysql.MySQLConsumer(
-            self.charm, self.relation_name, databases=self.databases
+        # Import here to avoid import errors if ops_sunbeam is being used
+        # with a charm that doesn't want a DBHandler
+        # and doesn't install this database_requires library.
+        from charms.data_platform_libs.v0.database_requires import (
+            DatabaseRequires
         )
-        _rname = self.relation_name.replace("-", "_")
-        db_relation_event = getattr(
-            self.charm.on, f"{_rname}_relation_changed"
+        # Alias is required to events for this db
+        # from trigger handlers for other dbs.
+        # It also must be a valid python identifier.
+        alias = self.relation_name.replace("-", "_")
+        db = DatabaseRequires(
+            self.charm, self.relation_name, self.database_name,
+            relations_aliases=[alias]
         )
-        self.framework.observe(db_relation_event, self._on_database_changed)
+        self.framework.observe(
+            # db.on[f"{alias}_database_created"], # this doesn't work because:
+            # RuntimeError: Framework.observe requires a BoundEvent as
+            # second parameter, got <ops.framework.PrefixedEvents object ...
+            getattr(db.on, f"{alias}_database_created"),
+            self._on_database_updated
+        )
+        self.framework.observe(
+            getattr(db.on, f"{alias}_endpoints_changed"),
+            self._on_database_updated
+        )
+        # this will be set to self.interface in parent class
         return db
 
-    def _on_database_changed(self, event: ops.framework.EventBase) -> None:
+    def _on_database_updated(self, event: ops.framework.EventBase) -> None:
         """Handle database change events."""
-        databases = self.interface.databases()
-        logger.info(f"Received databases: {databases}")
-
-        if not databases:
+        if not (event.username or event.password or event.endpoints):
             return
-        credentials = self.interface.credentials()
-        # XXX Lets not log the credentials
-        logger.info(f"Received credentials: {credentials}")
+
+        data = event.relation.data[event.relation.app]
+        # XXX: Let's not log the credentials with the data
+        logger.info(f"Received data: {data}")
         self.callback_f(event)
+
+    def get_relation_data(self) -> dict:
+        """Load the data from the relation for consumption in the handler."""
+        if len(self.interface.relations) > 0:
+            return self.interface.relations[0].data[
+                self.interface.relations[0].app
+            ]
+        return {}
 
     @property
     def ready(self) -> bool:
         """Whether the handler is ready for use."""
-        try:
-            # Nothing to wait for
-            return bool(self.interface.databases())
-        except AttributeError:
-            return False
+        data = self.get_relation_data()
+        return bool(
+            data.get("endpoints") and
+            data.get("username") and
+            data.get("password")
+        )
 
     def context(self) -> dict:
         """Context containing database connection data."""
-        try:
-            databases = self.interface.databases()
-        except AttributeError:
+        if not self.ready:
             return {}
-        if not databases:
-            return {}
-        ctxt = {}
-        conn_data = {
-            "database_host": self.interface.credentials().get("address"),
-            "database_password": self.interface.credentials().get("password"),
-            "database_user": self.interface.credentials().get("username"),
-            "database_type": "mysql+pymysql",
-        }
 
-        for db in self.interface.databases():
-            ctxt[db] = {"database": db}
-            ctxt[db].update(conn_data)
-            connection = (
-                "{database_type}://{database_user}:{database_password}"
-                "@{database_host}/{database}")
-            if conn_data.get("database_ssl_ca"):
-                connection = connection + "?ssl_ca={database_ssl_ca}"
-                if conn_data.get("database_ssl_cert"):
-                    connection = connection + (
-                        "&ssl_cert={database_ssl_cert}"
-                        "&ssl_key={database_ssl_key}")
-            ctxt[db]["connection"] = str(connection.format(
-                **ctxt[db]))
-        # XXX Adding below to top level dict should be dropped.
-        ctxt["database"] = self.interface.databases()[0]
-        ctxt.update(conn_data)
-        # /DROP
-        return ctxt
+        data = self.get_relation_data()
+        database_name = self.database_name
+        database_host = data["endpoints"]
+        database_user = data["username"]
+        database_password = data["password"]
+        database_type = "mysql+pymysql"
+        has_tls = data.get("tls")
+        tls_ca = data.get("tls-ca")
+
+        connection = (
+            f"{database_type}://{database_user}:{database_password}"
+            f"@{database_host}/{database_name}"
+        )
+        if has_tls:
+            connection = connection + f"?ssl_ca={tls_ca}"
+
+        # This context ends up namespaced under the relation name
+        # (normalised to fit a python identifier - s/-/_/),
+        # and added to the context for jinja templates.
+        # eg. if this DBHandler is added with relation name api-database,
+        # the database connection string can be obtained in templates with
+        # `api_database.connection`.
+        return {
+            "database": database_name,
+            "database_host": database_host,
+            "database_password": database_password,
+            "database_user": database_user,
+            "database_type": database_type,
+            "connection": connection,
+        }
 
 
 class AMQPHandler(RelationHandler):

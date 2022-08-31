@@ -13,12 +13,10 @@ applications:
     options:
       kubernetes-service-annotations: metallb.universe.tf/address-pool=public
   mysql:
-    charm: sunbeam-mysql-k8s
-    channel: beta
+    charm: mysql-k8s
+    channel: edge
     scale: 1
     trust: false
-    resources:
-      mysql-image: ubuntu/mysql:latest
   rabbitmq:
     charm: sunbeam-rabbitmq-operator
     channel: edge
@@ -76,14 +74,14 @@ applications:
       vault-image: vault
 relations:
 - - mysql:database
-  - keystone:shared-db
+  - keystone:database
 - - traefik:ingress
   - keystone:ingress-internal
 - - traefik-public:ingress
   - keystone:ingress-public
 
 - - mysql:database
-  - glance:shared-db
+  - glance:database
 - - rabbitmq:amqp
   - glance:amqp
 - - keystone:identity-service
@@ -94,7 +92,11 @@ relations:
   - glance:ingress-public
 
 - - mysql:database
-  - nova:shared-db
+  - nova:database
+- - mysql:database
+  - nova:api-database
+- - mysql:database
+  - nova:cell-database
 - - rabbitmq:amqp
   - nova:amqp
 - - keystone:identity-service
@@ -105,7 +107,7 @@ relations:
   - nova:ingress-public
 
 - - mysql:database
-  - placement:shared-db
+  - placement:database
 - - keystone:identity-service
   - placement:identity-service
 - - traefik:ingress
@@ -114,7 +116,7 @@ relations:
   - placement:ingress-public
 
 - - mysql:database
-  - neutron:shared-db
+  - neutron:database
 - - rabbitmq:amqp
   - neutron:amqp
 - - keystone:identity-service

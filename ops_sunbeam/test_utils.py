@@ -374,7 +374,7 @@ def add_cloud_credentials_relation_response(
 
 def add_base_db_relation(harness: Harness) -> str:
     """Add db relation."""
-    rel_id = harness.add_relation("shared-db", "mysql")
+    rel_id = harness.add_relation("database", "mysql")
     harness.add_relation_unit(rel_id, "mysql/0")
     harness.add_relation_unit(rel_id, "mysql/0")
     harness.update_relation_data(
@@ -391,16 +391,9 @@ def add_db_relation_credentials(
         rel_id,
         "mysql",
         {
-            "databases": json.dumps(["db1"]),
-            "data": json.dumps(
-                {
-                    "credentials": {
-                        "username": "foo",
-                        "password": "hardpassword",
-                        "address": "10.0.0.10",
-                    }
-                }
-            ),
+            "username": "foo",
+            "password": "hardpassword",
+            "endpoints": "10.0.0.10",
         },
     )
 
@@ -545,7 +538,7 @@ def add_complete_peer_relation(harness: Harness) -> None:
 
 
 test_relations = {
-    'shared-db': add_complete_db_relation,
+    'database': add_complete_db_relation,
     'amqp': add_complete_amqp_relation,
     'identity-service': add_complete_identity_relation,
     'cloud-credentials': add_complete_cloud_credentials_relation,

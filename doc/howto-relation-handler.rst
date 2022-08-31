@@ -120,7 +120,7 @@ Configuring Charm to use custom relation handler
 The base class will add the default relation handlers for any interfaces
 which do not yet have a handler. Therefore the custom handler is added to
 the list and then passed to the super method. The base charm class will
-see a handler already exists for shared-db and not add the default one.
+see a handler already exists for database and not add the default one.
 
 .. code:: python
 
@@ -131,9 +131,9 @@ see a handler already exists for shared-db and not add the default one.
                 sunbeam_rhandlers.RelationHandler]:
             """Relation handlers for the service."""
             handlers = handlers or []
-            if self.can_add_handler("shared-db", handlers):
+            if self.can_add_handler("database", handlers):
                 self.db = sunbeam_rhandlers.DBHandler(
-                    self, "shared-db", self.configure_charm, self.databases
+                    self, "database", self.configure_charm, self.databases
                 )
                 handlers.append(self.db)
             handlers = super().get_relation_handlers(handlers)

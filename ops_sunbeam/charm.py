@@ -31,7 +31,7 @@ containers and managing the service running in the container.
 
 import ipaddress
 import logging
-from typing import List
+from typing import List, Mapping
 
 import ops.charm
 import ops.framework
@@ -98,11 +98,15 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.config.get("rabbit-vhost") or "openstack",
             )
             handlers.append(self.amqp)
-        if self.can_add_handler("shared-db", handlers):
-            self.db = sunbeam_rhandlers.DBHandler(
-                self, "shared-db", self.configure_charm, self.databases
-            )
-            handlers.append(self.db)
+
+        self.dbs = {}
+        for relation_name, database_name in self.databases.items():
+            if self.can_add_handler(relation_name, handlers):
+                db = sunbeam_rhandlers.DBHandler(
+                    self, relation_name, self.configure_charm, database_name,
+                )
+                self.dbs[relation_name] = db
+                handlers.append(db)
         if self.can_add_handler("peers", handlers):
             self.peers = sunbeam_rhandlers.BasePeerHandler(
                 self, "peers", self.configure_charm
@@ -254,12 +258,26 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         return "src/templates"
 
     @property
-    def databases(self) -> List[str]:
-        """Databases needed to support this charm.
-
-        Defaults to a single database matching the app name.
+    def databases(self) -> Mapping[str, str]:
         """
-        return [self.service_name.replace("-", "_")]
+        Return a mapping of database relation names to database names.
+
+        Use this to define the databases required by an application.
+
+        All entries here
+        that have a corresponding relation defined in metadata
+        will automatically have a a DBHandler instance set up for it,
+        and assigned to `charm.dbs[relation_name]`.
+        Entries that don't have a matching relation in metadata
+        will be ignored.
+        Note that the relation interface type is expected to be 'mysql_client'.
+
+        It defaults to loading a relation named "database",
+        with the database named after the service name.
+        """
+        return {
+            "database": self.service_name.replace("-", "_")
+        }
 
     def _on_config_changed(self, event: ops.framework.EventBase) -> None:
         self.configure_charm(None)

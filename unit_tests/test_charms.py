@@ -91,8 +91,8 @@ tags:
 subordinate: false
 
 requires:
-  shared-db:
-    interface: mysql_datastore
+  database:
+    interface: mysql_client
     limit: 1
   ingress-internal:
     interface: ingress
@@ -187,7 +187,7 @@ class MyCharm(sunbeam_charm.OSBaseOperatorCharm):
 
 TEMPLATE_CONTENTS = """
 {{ wsgi_config.wsgi_admin_script }}
-{{ shared_db.database_password }}
+{{ database.database_password }}
 {{ options.debug }}
 {{ amqp.transport_url }}
 {{ amqp.hostname }}
