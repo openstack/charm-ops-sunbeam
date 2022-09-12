@@ -22,6 +22,13 @@ from urllib.parse import urlparse
 
 import ops.charm
 import ops.framework
+try:
+    from charms.traefik_k8s.v1.ingress import (
+        IngressPerAppRequirer,
+        IngressPerAppReadyEvent,
+        IngressPerAppRevokedEvent)
+except ModuleNotFoundError:
+    pass
 
 import ops_sunbeam.interfaces as sunbeam_interfaces
 
@@ -122,29 +129,31 @@ class IngressHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Ingress relation."""
         logger.debug("Setting up ingress event handler")
-        # Lazy import to ensure this lib is only required if the charm
-        # has this relation.
-        import charms.traefik_k8s.v0.ingress as ingress
-        interface = ingress.IngressPerAppRequirer(
+        interface = IngressPerAppRequirer(
             self.charm,
             self.relation_name,
             port=self.default_ingress_port,
         )
-        _rname = self.relation_name.replace("-", "_")
-        ingress_relation_event = getattr(
-            self.charm.on, f"{_rname}_relation_changed"
+        self.framework.observe(
+            interface.on.ready, self._on_ingress_ready
         )
-        self.framework.observe(ingress_relation_event,
-                               self._on_ingress_changed)
+        self.framework.observe(
+            interface.on.revoked, self._on_ingress_revoked
+        )
         return interface
 
-    def _on_ingress_changed(self, event: ops.framework.EventBase) -> None:
+    def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
         """Handle ingress relation changed events."""
         url = self.url
         logger.debug(f'Received url: {url}')
         if not url:
             return
 
+        self.callback_f(event)
+
+    def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
+        """Handle ingress relation revoked event."""
+        # Callback call to update keystone endpoints
         self.callback_f(event)
 
     @property

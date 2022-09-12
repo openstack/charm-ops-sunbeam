@@ -250,13 +250,12 @@ def add_ingress_relation_data(
     """Add ingress data to ingress relation."""
     app_name = 'traefik-' + endpoint_type
     url = 'http://' + endpoint_type + "-url"
-    ingress_data = {"ingress": {"url": url}}
+
+    ingress_data = {"url": url}
     harness.update_relation_data(
         rel_id,
         app_name,
-        {
-            "data": json.dumps(ingress_data),
-            "_supported_versions": yaml.dump(["v1"])})
+        {"ingress": json.dumps(ingress_data)})
 
 
 def add_complete_ingress_relation(harness: Harness) -> None:
@@ -670,6 +669,7 @@ def get_harness(
     harness._framework = framework.Framework(
         ":memory:", harness._charm_dir, harness._meta, harness._model
     )
+    harness.set_model_name("test-model")
     if initial_charm_config:
         harness.update_config(initial_charm_config)
     else:
