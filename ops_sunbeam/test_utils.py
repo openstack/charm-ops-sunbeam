@@ -327,7 +327,7 @@ def add_identity_service_relation_response(
             "service-protocol": "http",
             "service-project": "svcproj1",
             "service-project-id": "svcprojid1",
-            "service-username": "svcuser1",
+            "service-user-name": "svcuser1",
         },
     )
 
