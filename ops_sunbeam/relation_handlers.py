@@ -22,13 +22,6 @@ from urllib.parse import urlparse
 
 import ops.charm
 import ops.framework
-try:
-    from charms.traefik_k8s.v1.ingress import (
-        IngressPerAppRequirer,
-        IngressPerAppReadyEvent,
-        IngressPerAppRevokedEvent)
-except ModuleNotFoundError:
-    pass
 
 import ops_sunbeam.interfaces as sunbeam_interfaces
 
@@ -129,6 +122,7 @@ class IngressHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Ingress relation."""
         logger.debug("Setting up ingress event handler")
+        from charms.traefik_k8s.v1.ingress import IngressPerAppRequirer
         interface = IngressPerAppRequirer(
             self.charm,
             self.relation_name,
@@ -142,8 +136,13 @@ class IngressHandler(RelationHandler):
         )
         return interface
 
-    def _on_ingress_ready(self, event: IngressPerAppReadyEvent) -> None:
-        """Handle ingress relation changed events."""
+    def _on_ingress_ready(self, event) -> None:  # noqa: ANN001
+        """
+        Handle ingress relation changed events.
+
+        `event` is an instance of
+        `charms.traefik_k8s.v1.ingress.IngressPerAppReadyEvent`.
+        """
         url = self.url
         logger.debug(f'Received url: {url}')
         if not url:
@@ -151,8 +150,13 @@ class IngressHandler(RelationHandler):
 
         self.callback_f(event)
 
-    def _on_ingress_revoked(self, event: IngressPerAppRevokedEvent) -> None:
-        """Handle ingress relation revoked event."""
+    def _on_ingress_revoked(self, event) -> None:  # noqa: ANN001
+        """
+        Handle ingress relation revoked event.
+
+        `event` is an instance of
+        `charms.traefik_k8s.v1.ingress.IngressPerAppRevokedEvent`
+        """
         # Callback call to update keystone endpoints
         self.callback_f(event)
 
