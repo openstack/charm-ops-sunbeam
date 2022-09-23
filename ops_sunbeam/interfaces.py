@@ -15,7 +15,7 @@
 """Common interfaces not charm specific."""
 
 import logging
-import typing
+from typing import Dict, List, Optional
 
 import ops.model
 
@@ -84,7 +84,7 @@ class OperatorPeers(Object):
         return self.framework.model.get_relation(self.relation_name)
 
     @property
-    def _app_data_bag(self) -> typing.Dict[str, str]:
+    def _app_data_bag(self) -> Dict[str, str]:
         """Return all app data on peer relation."""
         if not self.peers_rel:
             return {}
@@ -105,22 +105,22 @@ class OperatorPeers(Object):
         logging.info("Peers on_changed")
         self.on.peers_data_changed.emit()
 
-    def set_app_data(self, settings: typing.Dict[str, str]) -> None:
+    def set_app_data(self, settings: Dict[str, str]) -> None:
         """Publish settings on the peer app data bag."""
         for k, v in settings.items():
             self._app_data_bag[k] = v
 
-    def get_app_data(self, key: str) -> None:
+    def get_app_data(self, key: str) -> Optional[str]:
         """Get the value corresponding to key from the app data bag."""
         if not self.peers_rel:
             return None
         return self._app_data_bag.get(key)
 
-    def get_all_app_data(self) -> None:
+    def get_all_app_data(self) -> Dict[str, str]:
         """Return all the app data from the relation."""
         return self._app_data_bag
 
-    def get_all_unit_values(self, key: str) -> typing.List[str]:
+    def get_all_unit_values(self, key: str) -> List[str]:
         """Retrieve value for key from all related units."""
         values = []
         if not self.peers_rel:
@@ -129,12 +129,12 @@ class OperatorPeers(Object):
             values.append(self.peers_rel.data[unit].get(key))
         return values
 
-    def set_unit_data(self, settings: typing.Dict[str, str]) -> None:
+    def set_unit_data(self, settings: Dict[str, str]) -> None:
         """Publish settings on the peer unit data bag."""
         for k, v in settings.items():
             self.peers_rel.data[self.model.unit][k] = v
 
-    def all_joined_units(self) -> typing.List[ops.model.Unit]:
+    def all_joined_units(self) -> List[ops.model.Unit]:
         """All remote units joined to the peer relation."""
         return set(self.peers_rel.units)
 

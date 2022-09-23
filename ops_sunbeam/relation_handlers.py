@@ -17,7 +17,7 @@
 import json
 import logging
 import cryptography.hazmat.primitives.serialization as serialization
-from typing import Callable, List, Tuple
+from typing import Callable, List, Tuple, Optional
 from urllib.parse import urlparse
 
 import ops.charm
@@ -484,7 +484,7 @@ class BasePeerHandler(RelationHandler):
         """Store data in peer app db."""
         self.interface.set_app_data(settings)
 
-    def get_app_data(self, key: str) -> str:
+    def get_app_data(self, key: str) -> Optional[str]:
         """Retrieve data from the peer relation."""
         return self.interface.get_app_data(key)
 
