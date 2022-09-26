@@ -1,24 +1,25 @@
 bundle: kubernetes
+
 applications:
   traefik:
-    charm: traefik-k8s
-    channel: beta
+    charm: ch:traefik-k8s
+    channel: edge
     scale: 1
     trust: true
   traefik-public:
-    charm: traefik-k8s
-    channel: beta
+    charm: ch:traefik-k8s
+    channel: edge
     scale: 1
     trust: true
     options:
       kubernetes-service-annotations: metallb.universe.tf/address-pool=public
   mysql:
-    charm: mysql-k8s
+    charm: ch:mysql-k8s
     channel: edge
     scale: 1
     trust: false
   rabbitmq:
-    charm: sunbeam-rabbitmq-operator
+    charm: ch:sunbeam-rabbitmq-operator
     channel: edge
     scale: 1
     trust: true
@@ -67,11 +68,12 @@ applications:
     scale: 1
     trust: true
   vault:
-    charm: icey-vault-k8s
+    charm: ch:icey-vault-k8s
     channel: stable
     scale: 1
     resources:
       vault-image: vault
+
 relations:
 - - mysql:database
   - keystone:database
