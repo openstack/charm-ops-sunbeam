@@ -66,6 +66,9 @@ class PebbleHandler(ops.charm.Object):
         self.openstack_release = openstack_release
         self.callback_f = callback_f
         self.setup_pebble_handler()
+        # The structure of status variable and corresponding logic
+        # will change with compund status feature
+        self.status = ""
 
     def setup_pebble_handler(self) -> None:
         """Configure handler for pebble ready event."""
@@ -109,6 +112,10 @@ class PebbleHandler(ops.charm.Object):
 
     def get_layer(self) -> dict:
         """Pebble configuration layer for the container."""
+        return {}
+
+    def get_healthcheck_layer(self) -> dict:
+        """Pebble configuration for health check layer for the container."""
         return {}
 
     @property
@@ -193,6 +200,61 @@ class PebbleHandler(ops.charm.Object):
                 logger.error('    %s', line)
             if exception_on_error:
                 raise
+
+    def add_healthchecks(self) -> None:
+        """Add healthcheck layer to the plan."""
+        healthcheck_layer = self.get_healthcheck_layer()
+        if not healthcheck_layer:
+            logger.debug("Healthcheck layer not defined in pebble handler")
+            return
+
+        container = self.charm.unit.get_container(self.container_name)
+        try:
+            plan = container.get_plan()
+            if not plan.checks:
+                logger.debug("Adding healthcheck layer to the plan")
+                container.add_layer(
+                    "healthchecks", healthcheck_layer, combine=True)
+        except ops.pebble.ConnectionError as connect_error:
+            logger.error("Not able to add Healthcheck layer")
+            logger.exception(connect_error)
+
+    def assess_status(self) -> str:
+        """Assess Healthcheck status.
+
+        :return: status message based on healthchecks
+        :rtype: str
+        """
+        failed_checks = []
+        container = self.charm.unit.get_container(self.container_name)
+        try:
+            checks = container.get_checks(level=ops.pebble.CheckLevel.READY)
+            for name, check in checks.items():
+                if check.status != ops.pebble.CheckStatus.UP:
+                    failed_checks.append(name)
+
+            # Verify alive checks if ready checks are missing
+            if not checks:
+                checks = container.get_checks(
+                    level=ops.pebble.CheckLevel.ALIVE)
+                for name, check in checks.items():
+                    if check.status != ops.pebble.CheckStatus.UP:
+                        failed_checks.append(name)
+
+        except ops.model.ModelError:
+            logger.warning(
+                f'Health check online for {self.container_name} not defined')
+        except ops.pebble.ConnectionError as connect_error:
+            logger.exception(connect_error)
+            failed_checks.append("Pebble Connection Error")
+
+        if failed_checks:
+            self.status = (
+                f'Health check failed for {self.container_name}: '
+                f'{failed_checks}'
+            )
+        else:
+            self.status = ''
 
 
 class ServicePebbleHandler(PebbleHandler):
@@ -293,6 +355,33 @@ class WSGIPebbleHandler(PebbleHandler):
                     "startup": "disabled",
                 },
             },
+        }
+
+    def get_healthcheck_layer(self) -> dict:
+        """Apache WSGI health check pebble layer.
+
+        :returns: pebble health check layer configuration for wsgi service
+        """
+        return {
+            "checks": {
+                "up": {
+                    "override": "replace",
+                    "level": "alive",
+                    "period": "10s",
+                    "timeout": "3s",
+                    "threshold": 3,
+                    "exec": {
+                        "command": "service apache2 status"
+                    }
+                },
+                "online": {
+                    "override": "replace",
+                    "level": "ready",
+                    "http": {
+                        "url": self.charm.healthcheck_http_url
+                    }
+                },
+            }
         }
 
     def init_service(self, context: sunbeam_core.OPSCharmContexts) -> None:

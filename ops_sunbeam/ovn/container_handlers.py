@@ -28,6 +28,11 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
         """Path to OVN service wrapper."""
         raise NotImplementedError
 
+    @property
+    def status_command(self) -> str:
+        """Command to check status of service."""
+        raise NotImplementedError
+
     def init_service(self, context: sunbeam_core.OPSCharmContexts) -> None:
         """Initialise service ready for use.
 
@@ -46,7 +51,11 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
         raise NotImplementedError
 
     def get_layer(self) -> dict:
-        """Pebble configuration layer for OVN service."""
+        """Pebble configuration layer for OVN service.
+
+        :returns: pebble layer configuration for service
+        :rtype: dict
+        """
         return {
             "summary": f"{self.service_description} service",
             "description": ("Pebble config layer for "
@@ -59,6 +68,24 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
                     "startup": "disabled",
                 },
             },
+        }
+
+    def get_healthcheck_layer(self) -> dict:
+        """Health check pebble layer.
+
+        :returns: pebble health check layer configuration for OVN service
+        :rtype: dict
+        """
+        return {
+            "checks": {
+                "online": {
+                    "override": "replace",
+                    "level": "ready",
+                    "exec": {
+                        "command": f"{self.status_command}"
+                    }
+                },
+            }
         }
 
     @property

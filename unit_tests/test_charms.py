@@ -250,3 +250,8 @@ class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
     def template_dir(self) -> str:
         """Templates dir."""
         return self._template_dir
+
+    @property
+    def healthcheck_http_url(self) -> str:
+        """Healthcheck HTTP URL for the service."""
+        return f'http://localhost:{self.default_public_ingress_port}/v3'
