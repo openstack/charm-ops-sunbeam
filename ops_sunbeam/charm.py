@@ -231,7 +231,13 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 return
 
         if not self.bootstrapped():
-            self._do_bootstrap()
+            if not self._do_bootstrap():
+                self._state.bootstrapped = False
+                logging.warning(
+                    "Failed to bootstrap the service, event deferred")
+                # Defer the event to re-trigger the bootstrap process
+                event.defer()
+                return
             if self.unit.is_leader() and self.supports_peer_relation:
                 self.set_leader_ready()
 
@@ -383,17 +389,21 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             logger.warning(
                 "Not DB sync ran. Charm does not specify self.db_sync_cmds")
 
-    def _do_bootstrap(self) -> None:
-        """Perform bootstrap."""
+    def _do_bootstrap(self) -> bool:
+        """Perform bootstrap.
+
+        :return: Return True if bootstrap is success
+        :rtype: bool
+        """
         try:
             self.run_db_sync()
+            return True
         except ops.pebble.ExecError as e:
             logger.exception('Failed to bootstrap')
             logger.error('Exited with code %d. Stderr:', e.exit_code)
             for line in e.stderr.splitlines():
                 logger.error('    %s', line)
-            self._state.bootstrapped = False
-            return
+            return False
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
