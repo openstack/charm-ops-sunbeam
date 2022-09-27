@@ -205,6 +205,17 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         else:
             return None
 
+    def get_named_pebble_handlers(
+        self,
+        container_names: List[str]
+    ) -> List[sunbeam_chandlers.PebbleHandler]:
+        """Get pebble handlers matching container_names."""
+        return [
+            h
+            for h in self.pebble_handlers
+            if h.container_name in container_names
+        ]
+
     def configure_charm(self, event: ops.framework.EventBase) -> None:
         """Catchall handler to configure charm services."""
         if self.supports_peer_relation and not (
