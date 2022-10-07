@@ -39,7 +39,7 @@ options:
   region:
     default: RegionOne
     description: Region
-    type: str
+    type: string
 """
 
 INITIAL_CHARM_CONFIG = {

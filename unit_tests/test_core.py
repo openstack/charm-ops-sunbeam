@@ -128,7 +128,7 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
         expect_entries = [
             '/bin/wsgi_admin',
             'hardpassword',
-            'true',
+            'True',
             'rabbit://my-service:rabbit.pass@10.0.0.13:5672/openstack',
             'rabbithost1.local',
             'svcpass1',
@@ -185,7 +185,7 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             'hardpassword')
         self.assertEqual(
             contexts.options.debug,
-            'true')
+            True)
 
     def test_peer_leader_db(self) -> None:
         """Test interacting with peer app db."""

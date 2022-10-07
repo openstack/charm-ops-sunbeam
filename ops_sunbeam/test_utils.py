@@ -16,7 +16,6 @@
 
 """Module containing shared code to be used in a charms units tests."""
 
-import yaml
 import inspect
 import json
 import ops
@@ -651,11 +650,6 @@ def get_harness(
         if os.path.isfile(metadata_file):
             with open(metadata_file) as f:
                 charm_metadata = f.read()
-    if not charm_config:
-        config_file = f"{charm_dir}/config.yaml"
-        if os.path.isfile(config_file):
-            with open(config_file) as f:
-                charm_config = f.read()
 
     harness = Harness(
         charm_class,
@@ -663,18 +657,12 @@ def get_harness(
         config=charm_config
     )
     harness._backend = _OSTestingModelBackend(
-        harness._unit_name, harness._meta
+        harness._unit_name, harness._meta, harness._get_config(charm_config)
     )
     harness._model = model.Model(harness._meta, harness._backend)
     harness._framework = framework.Framework(
         ":memory:", harness._charm_dir, harness._meta, harness._model
     )
     harness.set_model_name("test-model")
-    if initial_charm_config:
-        harness.update_config(initial_charm_config)
-    else:
-        defaults = {
-            k: v['default']
-            for k, v in yaml.safe_load(charm_config)['options'].items()}
-        harness.update_config(defaults)
+
     return harness
