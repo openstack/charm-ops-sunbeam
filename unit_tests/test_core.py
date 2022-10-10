@@ -73,21 +73,18 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
             self.harness.charm.relation_handlers_ready())
 
 
-class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
+class _TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
     """Test for the OSBaseOperatorAPICharm class."""
 
     PATCHES = []
 
-    @mock.patch(
-        'charms.observability_libs.v0.kubernetes_service_patch.'
-        'KubernetesServicePatch')
-    def setUp(self, mock_svc_patch: mock.patch) -> None:
+    def setUp(self, charm_to_test: test_charms.MyAPICharm) -> None:
         """Charm test class setup."""
         self.container_calls = test_utils.ContainerCalls()
 
         super().setUp(sunbeam_charm, self.PATCHES)
         self.harness = test_utils.get_harness(
-            test_charms.MyAPICharm,
+            charm_to_test,
             test_charms.API_CHARM_METADATA,
             self.container_calls,
             charm_config=test_charms.CHARM_CONFIG,
@@ -115,6 +112,17 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
     def set_pebble_ready(self) -> None:
         """Set pebble ready event."""
         self.harness.container_pebble_ready('my-service')
+
+
+class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
+    """Test Charm with services."""
+
+    @mock.patch(
+        'charms.observability_libs.v0.kubernetes_service_patch.'
+        'KubernetesServicePatch')
+    def setUp(self, mock_svc_patch: mock.patch) -> None:
+        """Run test class setup."""
+        super().setUp(test_charms.MyAPICharm)
 
     def test_write_config(self) -> None:
         """Test when charm is ready configs are written correctly."""
@@ -149,6 +157,20 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             user='root',
             group='root',
         )
+
+    def test_start_services(self) -> None:
+        """Test service is started."""
+        test_utils.add_complete_ingress_relation(self.harness)
+        self.harness.set_leader()
+        test_utils.add_complete_peer_relation(self.harness)
+        self.set_pebble_ready()
+        self.harness.charm.leader_set({'foo': 'bar'})
+        test_utils.add_api_relations(self.harness)
+        test_utils.add_complete_cloud_credentials_relation(self.harness)
+        self.harness.set_can_connect('my-service', True)
+        self.assertEqual(
+            self.container_calls.started_services('my-service'),
+            ['wsgi-my-service'])
 
     def test__on_database_changed(self) -> None:
         """Test database is requested."""
@@ -300,3 +322,28 @@ class TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
             self.harness, ingress_rel_id, 'public')
         self.assertTrue(
             self.harness.charm.relation_handlers_ready())
+
+
+class TestOSBaseOperatorMultiSVCAPICharm(_TestOSBaseOperatorAPICharm):
+    """Test Charm with multiple services."""
+
+    @mock.patch(
+        'charms.observability_libs.v0.kubernetes_service_patch.'
+        'KubernetesServicePatch')
+    def setUp(self, mock_svc_patch: mock.patch) -> None:
+        """Charm test class setip."""
+        super().setUp(test_charms.TestMultiSvcCharm)
+
+    def test_start_services(self) -> None:
+        """Test multiple services are started."""
+        test_utils.add_complete_ingress_relation(self.harness)
+        self.harness.set_leader()
+        test_utils.add_complete_peer_relation(self.harness)
+        self.set_pebble_ready()
+        self.harness.charm.leader_set({'foo': 'bar'})
+        test_utils.add_api_relations(self.harness)
+        test_utils.add_complete_cloud_credentials_relation(self.harness)
+        self.harness.set_can_connect('my-service', True)
+        self.assertEqual(
+            sorted(self.container_calls.started_services('my-service')),
+            sorted(['apache forwarder', 'my-service']))

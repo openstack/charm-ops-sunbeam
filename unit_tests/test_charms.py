@@ -24,11 +24,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import ops.framework
+from typing import List
 
 sys.path.append("unit_tests/lib")  # noqa
 sys.path.append("src")  # noqa
 
 import ops_sunbeam.charm as sunbeam_charm
+import ops_sunbeam.container_handlers as sunbeam_chandlers
 
 CHARM_CONFIG = """
 options:
@@ -255,3 +257,48 @@ class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
     def healthcheck_http_url(self) -> str:
         """Healthcheck HTTP URL for the service."""
         return f'http://localhost:{self.default_public_ingress_port}/v3'
+
+
+class MultiSvcPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
+    """Test pebble handler for multi service charm."""
+
+    def get_layer(self) -> dict:
+        """Glance API service pebble layer.
+
+        :returns: pebble layer configuration for glance api service
+        """
+        return {
+            "summary": f"{self.service_name} layer",
+            "description": "pebble config layer for glance api service",
+            "services": {
+                f"{self.service_name}": {
+                    "override": "replace",
+                    "summary": f"{self.service_name} standalone",
+                    "command": "/usr/bin/glance-api",
+                    "startup": "disabled",
+                },
+                "apache forwarder": {
+                    "override": "replace",
+                    "summary": "apache",
+                    "command": "/usr/sbin/apache2ctl -DFOREGROUND",
+                    "startup": "disabled",
+                },
+            },
+        }
+
+
+class TestMultiSvcCharm(MyAPICharm):
+    """Test class of multi service charm."""
+
+    def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
+        """Pebble handlers for the service."""
+        return [
+            MultiSvcPebbleHandler(
+                self,
+                self.service_name,
+                self.service_name,
+                self.container_configs,
+                self.template_dir,
+                self.openstack_release,
+                self.configure_charm
+            )]

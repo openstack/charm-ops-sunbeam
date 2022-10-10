@@ -256,6 +256,15 @@ class PebbleHandler(ops.charm.Object):
         else:
             self.status = ''
 
+    def _start_all(self) -> None:
+        """Start services in container."""
+        container = self.charm.unit.get_container(self.container_name)
+        services = container.get_services()
+        for service_name, service in services.items():
+            if service.is_running():
+                container.stop(service_name)
+            container.start(service_name)
+
 
 class ServicePebbleHandler(PebbleHandler):
     """Container handler for containers which manage a service."""
@@ -272,7 +281,7 @@ class ServicePebbleHandler(PebbleHandler):
         self._state.service_ready = True
 
     def start_service(self) -> None:
-        """Start service in container."""
+        """Check and start services in container."""
         container = self.charm.unit.get_container(self.container_name)
         if not container:
             logger.debug(f'{self.container_name} container is not ready. '
@@ -283,10 +292,7 @@ class ServicePebbleHandler(PebbleHandler):
                 self.service_name,
                 self.get_layer(),
                 combine=True)
-        service = container.get_service(self.service_name)
-        if service.is_running():
-            container.stop(self.service_name)
-        container.start(self.service_name)
+        self._start_all()
 
 
 class WSGIPebbleHandler(PebbleHandler):
@@ -316,7 +322,7 @@ class WSGIPebbleHandler(PebbleHandler):
         self.wsgi_service_name = wsgi_service_name
 
     def start_wsgi(self) -> None:
-        """Start WSGI service."""
+        """Check and start services in container."""
         container = self.charm.unit.get_container(self.container_name)
         if not container:
             logger.debug(
@@ -329,11 +335,7 @@ class WSGIPebbleHandler(PebbleHandler):
                 self.service_name,
                 self.get_layer(),
                 combine=True)
-        service = container.get_service(self.wsgi_service_name)
-        if service.is_running():
-            container.stop(self.wsgi_service_name)
-
-        container.start(self.wsgi_service_name)
+        self._start_all()
 
     def start_service(self) -> None:
         """Start the service."""

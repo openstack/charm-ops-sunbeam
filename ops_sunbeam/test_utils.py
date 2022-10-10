@@ -25,6 +25,7 @@ import sys
 import typing
 import unittest
 import collections
+from typing import List
 
 from mock import MagicMock, Mock, patch
 
@@ -140,10 +141,22 @@ class ContainerCalls:
 
     def __init__(self) -> None:
         """Init container calls."""
+        self.start = collections.defaultdict(list)
         self.push = collections.defaultdict(list)
         self.pull = collections.defaultdict(list)
         self.execute = collections.defaultdict(list)
         self.remove_path = collections.defaultdict(list)
+
+    def add_start(self, container_name: str, call: typing.Dict) -> None:
+        """Log a start call."""
+        self.start[container_name].append(call)
+
+    def started_services(self, container_name: str) -> List:
+        """Distinct unordered list of services that were started."""
+        return list(set([
+            svc
+            for svc_list in self.start[container_name]
+            for svc in svc_list]))
 
     def add_push(self, container_name: str, call: typing.Dict) -> None:
         """Log a push call."""
@@ -606,6 +619,14 @@ def get_harness(
             process_mock = MagicMock()
             process_mock.wait_output.return_value = ('', None)
             return process_mock
+
+        def start_services(
+                self, services: List[str], timeout: float = 30.0,
+                delay: float = 0.1,) -> None:
+            """Record start service events."""
+            container_calls.add_start(
+                self.container_name,
+                services)
 
     class _OSTestingModelBackend(_TestingModelBackend):
         def get_pebble(self, socket_path: str) -> _OSTestingPebbleClient:
