@@ -769,7 +769,7 @@ class CloudCredentialsRequiresHandler(RelationHandler):
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for cloud-credentials relation."""
-        import charms.sunbeam_keystone_operator.v0.cloud_credentials as \
+        import charms.keystone_k8s.v0.cloud_credentials as \
             cloud_credentials
         logger.debug('Setting up the cloud-credentials event handler')
         credentials_service = cloud_credentials.CloudCredentialsRequires(
