@@ -54,7 +54,6 @@ class PebbleHandler(ops.charm.Object):
     ) -> None:
         """Run constructor."""
         super().__init__(charm, None)
-        self._state.set_default(pebble_ready=False)
         self._state.set_default(config_pushed=False)
         self._state.set_default(service_ready=False)
         self.charm = charm
@@ -85,8 +84,6 @@ class PebbleHandler(ops.charm.Object):
         container = event.workload
         container.add_layer(self.service_name, self.get_layer(), combine=True)
         logger.debug(f"Plan: {container.get_plan()}")
-        self.ready = True
-        self._state.pebble_ready = True
         self.charm.configure_charm(event)
 
     def write_config(self, context: sunbeam_core.OPSCharmContexts) -> None:
@@ -159,7 +156,9 @@ class PebbleHandler(ops.charm.Object):
     @property
     def pebble_ready(self) -> bool:
         """Determine if pebble is running and ready for use."""
-        return self._state.pebble_ready
+        return self.charm.unit.get_container(
+            self.container_name
+        ).can_connect()
 
     @property
     def config_pushed(self) -> bool:
