@@ -30,14 +30,14 @@ from ops.framework import (
 )
 
 # The unique Charmhub library identifier, never change it
-LIBID = "19e5a5857acd4a94a4a759d173d18232"
+LIBID = "114b7bb1970445daa61650e451f9da62"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 1
 
 
 # TODO: add your code here! Happy coding!
@@ -201,4 +201,5 @@ class OVSDBCMSProvides(Object):
         for relation in relations:
             for k, v in settings.items():
                 relation.data[self.model.unit][k] = v
+
 
