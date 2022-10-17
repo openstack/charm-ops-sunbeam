@@ -26,7 +26,7 @@ Two events are also available to respond to:
 A basic example showing the usage of this relation follows:
 
 ```
-from charms.sunbeam_sunbeam_identity_service_operator.v0.identity_service import IdentityServiceRequires
+from charms.sunbeam_keystone_operator.v0.identity_service import IdentityServiceRequires
 
 class IdentityServiceClientCharm(CharmBase):
     def __init__(self, *args):
@@ -75,19 +75,8 @@ class IdentityServiceClientCharm(CharmBase):
 ```
 """
 
-# The unique Charmhub library identifier, never change it
-LIBID = "6a7cb19b98314ecf916e3fcb02708608"
-
-# Increment this major API version when introducing breaking changes
-LIBAPI = 0
-
-# Increment this PATCH version before using `charmcraft publish-lib` or reset
-# to 0 if you are raising the major API version
-LIBPATCH = 1
-
 import json
 import logging
-import requests
 
 from ops.framework import (
     StoredState,
@@ -96,10 +85,20 @@ from ops.framework import (
     EventSource,
     Object,
 )
-
 from ops.model import Relation
 
-from typing import List
+logger = logging.getLogger(__name__)
+
+# The unique Charmhub library identifier, never change it
+LIBID = "0fa7fe7236c14c6e9624acf232b9a3b0"
+
+# Increment this major API version when introducing breaking changes
+LIBAPI = 0
+
+# Increment this PATCH version before using `charmcraft publish-lib` or reset
+# to 0 if you are raising the major API version
+LIBPATCH = 1
+
 
 logger = logging.getLogger(__name__)
 
@@ -309,6 +308,20 @@ class IdentityServiceRequires(Object):
         """Return the service_user_id."""
         return self.get_remote_app_data('service-user-id')
 
+    @property
+    def internal_auth_url(self) -> str:
+        """Return the internal_auth_url."""
+        return self.get_remote_app_data('internal-auth-url')
+
+    @property
+    def admin_auth_url(self) -> str:
+        """Return the admin_auth_url."""
+        return self.get_remote_app_data('admin-auth-url')
+
+    @property
+    def public_auth_url(self) -> str:
+        """Return the public_auth_url."""
+        return self.get_remote_app_data('public-auth-url')
 
     def register_services(self, service_endpoints: dict,
                           region: str) -> None:
@@ -316,7 +329,9 @@ class IdentityServiceRequires(Object):
         if self.model.unit.is_leader():
             logging.debug("Requesting service registration")
             app_data = self._identity_service_rel.data[self.charm.app]
-            app_data["service-endpoints"] = json.dumps(service_endpoints)
+            app_data["service-endpoints"] = json.dumps(
+                service_endpoints, sort_keys=True
+            )
             app_data["region"] = region
 
 
@@ -337,7 +352,6 @@ class ReadyIdentityServiceClientsEvent(EventBase):
         self.service_endpoints = service_endpoints
         self.region = region
         self.client_app_name = client_app_name
-            
 
     def snapshot(self):
         return {
@@ -399,14 +413,13 @@ class IdentityServiceProvides(Object):
         REQUIRED_KEYS = [
             'service-endpoints',
             'region']
-        
+
         values = [
             event.relation.data[event.relation.app].get(k)
-            for k in REQUIRED_KEYS ]
+            for k in REQUIRED_KEYS
+        ]
         # Validate data on the relation
         if all(values):
-            print(event.relation.id)
-            print(event.relation.name)
             service_eps = json.loads(
                 event.relation.data[event.relation.app]['service-endpoints'])
             self.on.ready_identity_service_clients.emit(
@@ -439,11 +452,18 @@ class IdentityServiceProvides(Object):
                                          service_domain: str,
                                          service_password: str,
                                          service_project: str,
-                                         service_user: str):
+                                         service_user: str,
+                                         internal_auth_url: str,
+                                         admin_auth_url: str,
+                                         public_auth_url: str):
         logging.debug("Setting identity_service connection information.")
+        _identity_service_rel = None
         for relation in self.framework.model.relations[relation_name]:
             if relation.id == relation_id:
                 _identity_service_rel = relation
+        if not _identity_service_rel:
+            # Relation has disappeared so skip send of data
+            return
         app_data = _identity_service_rel.data[self.charm.app]
         app_data["api-version"] = api_version
         app_data["auth-host"] = auth_host
@@ -468,3 +488,6 @@ class IdentityServiceProvides(Object):
         app_data["service-user-name"] = service_user.name
         app_data["service-user-id"] = service_user.id
         app_data["service-password"] = service_password
+        app_data["internal-auth-url"] = internal_auth_url
+        app_data["admin-auth-url"] = admin_auth_url
+        app_data["public-auth-url"] = public_auth_url

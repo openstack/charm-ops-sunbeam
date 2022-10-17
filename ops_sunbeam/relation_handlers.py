@@ -409,7 +409,7 @@ class IdentityServiceRequiresHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Identity service relation."""
         logger.debug("Setting up Identity Service event handler")
-        import charms.sunbeam_keystone_operator.v0.identity_service as sun_id
+        import charms.keystone_k8s.v0.identity_service as sun_id
         id_svc = sun_id.IdentityServiceRequires(
             self.charm, self.relation_name, self.service_endpoints, self.region
         )
