@@ -388,7 +388,7 @@ class OVSDBCMSRequiresHandler(sunbeam_rhandlers.RelationHandler,
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
         logger.debug("Setting up ovs-cms requires event handler")
-        import charms.sunbeam_ovn_central_operator.v0.ovsdb as ovsdb
+        import charms.ovn_central_k8s.v0.ovsdb as ovsdb
         ovsdb_svc = ovsdb.OVSDBCMSRequires(
             self.charm,
             self.relation_name,
