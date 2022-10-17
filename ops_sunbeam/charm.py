@@ -95,7 +95,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """Relation handlers for the service."""
         handlers = handlers or []
         if self.can_add_handler("amqp", handlers):
-            self.amqp = sunbeam_rhandlers.AMQPHandler(
+            self.amqp = sunbeam_rhandlers.RabbitMQHandler(
                 self,
                 "amqp",
                 self.configure_charm,

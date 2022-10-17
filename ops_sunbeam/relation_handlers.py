@@ -308,8 +308,8 @@ class DBHandler(RelationHandler):
         }
 
 
-class AMQPHandler(RelationHandler):
-    """Handler for managing a amqp relation."""
+class RabbitMQHandler(RelationHandler):
+    """Handler for managing a rabbitmq relation."""
 
     DEFAULT_PORT = "5672"
 
@@ -332,8 +332,8 @@ class AMQPHandler(RelationHandler):
         logger.debug("Setting up AMQP event handler")
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
-        import charms.sunbeam_rabbitmq_operator.v0.amqp as sunbeam_amqp
-        amqp = sunbeam_amqp.AMQPRequires(
+        import charms.rabbitmq_k8s.v0.rabbitmq as sunbeam_rabbitmq
+        amqp = sunbeam_rabbitmq.RabbitMQRequires(
             self.charm, self.relation_name, self.username, self.vhost
         )
         self.framework.observe(amqp.on.ready, self._on_amqp_ready)
@@ -381,6 +381,12 @@ class AMQPHandler(RelationHandler):
         )
         ctxt["transport_url"] = transport_url
         return ctxt
+
+
+class AMQPHandler(RabbitMQHandler):
+    """Backwards compatibility class for older library consumers."""
+
+    pass
 
 
 class IdentityServiceRequiresHandler(RelationHandler):
