@@ -316,7 +316,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         }
 
     def _on_config_changed(self, event: ops.framework.EventBase) -> None:
-        self.configure_charm(None)
+        self.configure_charm(event)
 
     def containers_ready(self) -> bool:
         """Determine whether all containers are ready for configuration."""
@@ -389,6 +389,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
         :raises: pebble.ExecError
         """
+        if not self.unit.is_leader():
+            logging.info('Not lead unit, skipping DB syncs')
+            return
         try:
             if self.db_sync_cmds:
                 logger.info("Syncing database...")
