@@ -142,6 +142,7 @@ class ContainerCalls:
     def __init__(self) -> None:
         """Init container calls."""
         self.start = collections.defaultdict(list)
+        self.stop = collections.defaultdict(list)
         self.push = collections.defaultdict(list)
         self.pull = collections.defaultdict(list)
         self.execute = collections.defaultdict(list)
@@ -151,11 +152,22 @@ class ContainerCalls:
         """Log a start call."""
         self.start[container_name].append(call)
 
+    def add_stop(self, container_name: str, call: typing.Dict) -> None:
+        """Log a start call."""
+        self.start[container_name].append(call)
+
     def started_services(self, container_name: str) -> List:
         """Distinct unordered list of services that were started."""
         return list(set([
             svc
             for svc_list in self.start[container_name]
+            for svc in svc_list]))
+
+    def stopped_services(self, container_name: str) -> List:
+        """Distinct unordered list of services that were started."""
+        return list(set([
+            svc
+            for svc_list in self.stop[container_name]
             for svc in svc_list]))
 
     def add_push(self, container_name: str, call: typing.Dict) -> None:
@@ -625,6 +637,14 @@ def get_harness(
                 delay: float = 0.1,) -> None:
             """Record start service events."""
             container_calls.add_start(
+                self.container_name,
+                services)
+
+        def stop_services(
+                self, services: List[str], timeout: float = 30.0,
+                delay: float = 0.1,) -> None:
+            """Record stop service events."""
+            container_calls.add_stop(
                 self.container_name,
                 services)
 

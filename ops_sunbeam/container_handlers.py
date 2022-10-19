@@ -86,26 +86,41 @@ class PebbleHandler(ops.charm.Object):
         logger.debug(f"Plan: {container.get_plan()}")
         self.charm.configure_charm(event)
 
-    def write_config(self, context: sunbeam_core.OPSCharmContexts) -> None:
+    def write_config(
+        self, context: sunbeam_core.OPSCharmContexts
+    ) -> List[str]:
         """Write configuration files into the container.
 
-        On the pre-condition that all relation adapters are ready
-        for use, write all configuration files into the container
-        so that the underlying service may be started.
+        Write self.container_configs into container if there contents
+        have changed.
+
+        :return: List of files that were updated
+        :rtype: List
         """
+        files_updated = []
         container = self.charm.unit.get_container(self.container_name)
         if container:
             for config in self.container_configs:
-                sunbeam_templating.sidecar_config_render(
+                changed = sunbeam_templating.sidecar_config_render(
                     container,
                     config,
                     self.template_dir,
                     self.openstack_release,
                     context,
                 )
+                if changed:
+                    files_updated.append(config.path)
+                    logger.debug(f"Changes detected in {files_updated}")
+                else:
+                    logger.debug("No file changes detected")
             self._state.config_pushed = True
         else:
             logger.debug("Container not ready")
+        if files_updated:
+            logger.debug(f"Changes detected in {files_updated}")
+        else:
+            logger.debug("No file changes detected")
+        return files_updated
 
     def get_layer(self) -> dict:
         """Pebble configuration layer for the container."""
@@ -255,13 +270,19 @@ class PebbleHandler(ops.charm.Object):
         else:
             self.status = ''
 
-    def _start_all(self) -> None:
-        """Start services in container."""
+    def _start_all(self, restart: bool = True) -> None:
+        """Start services in container.
+
+        :param restart: Whether to stop services before starting them.
+        """
         container = self.charm.unit.get_container(self.container_name)
         services = container.get_services()
         for service_name, service in services.items():
-            if service.is_running():
+            if service.is_running() and restart:
+                logger.debug(
+                    f'Stopping {service_name} in {self.container_name}')
                 container.stop(service_name)
+            logger.debug(f'Starting {service_name} in {self.container_name}')
             container.start(service_name)
 
 
@@ -275,12 +296,18 @@ class ServicePebbleHandler(PebbleHandler):
         that service is ready for us.
         """
         self.setup_dirs()
-        self.write_config(context)
-        self.start_service()
+        files_changed = self.write_config(context)
+        if files_changed:
+            self.start_service(restart=True)
+        else:
+            self.start_service(restart=False)
         self._state.service_ready = True
 
-    def start_service(self) -> None:
-        """Check and start services in container."""
+    def start_service(self, restart: bool = True) -> None:
+        """Check and start services in container.
+
+        :param restart: Whether to stop services before starting them.
+        """
         container = self.charm.unit.get_container(self.container_name)
         if not container:
             logger.debug(f'{self.container_name} container is not ready. '
@@ -291,7 +318,7 @@ class ServicePebbleHandler(PebbleHandler):
                 self.service_name,
                 self.get_layer(),
                 combine=True)
-        self._start_all()
+        self._start_all(restart=restart)
 
 
 class WSGIPebbleHandler(PebbleHandler):
@@ -320,8 +347,11 @@ class WSGIPebbleHandler(PebbleHandler):
         )
         self.wsgi_service_name = wsgi_service_name
 
-    def start_wsgi(self) -> None:
-        """Check and start services in container."""
+    def start_wsgi(self, restart: bool = True) -> None:
+        """Check and start services in container.
+
+        :param restart: Whether to stop services before starting them.
+        """
         container = self.charm.unit.get_container(self.container_name)
         if not container:
             logger.debug(
@@ -334,7 +364,7 @@ class WSGIPebbleHandler(PebbleHandler):
                 self.service_name,
                 self.get_layer(),
                 combine=True)
-        self._start_all()
+        self._start_all(restart=restart)
 
     def start_service(self) -> None:
         """Start the service."""
@@ -388,7 +418,7 @@ class WSGIPebbleHandler(PebbleHandler):
     def init_service(self, context: sunbeam_core.OPSCharmContexts) -> None:
         """Enable and start WSGI service."""
         container = self.charm.unit.get_container(self.container_name)
-        self.write_config(context)
+        files_changed = self.write_config(context)
         try:
             process = container.exec(
                 ['a2ensite', self.wsgi_service_name],
@@ -404,7 +434,11 @@ class WSGIPebbleHandler(PebbleHandler):
             )
             # ignore for now - pebble is raising an exited too quickly, but it
             # appears to work properly.
-        self.start_wsgi()
+        files_changed = self.write_config(context)
+        if files_changed:
+            self.start_wsgi(restart=True)
+        else:
+            self.start_wsgi(restart=False)
         self._state.service_ready = True
 
     @property

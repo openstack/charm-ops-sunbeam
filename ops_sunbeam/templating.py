@@ -19,6 +19,8 @@ import os
 from pathlib import Path
 from typing import List, TYPE_CHECKING
 
+import ops.pebble
+
 if TYPE_CHECKING:
     import ops_sunbeam.core as sunbeam_core
     import ops.model
@@ -46,8 +48,17 @@ def sidecar_config_render(
     template_dir: str,
     openstack_release: str,
     context: 'sunbeam_core.OPSCharmContexts',
-) -> None:
-    """Render templates inside containers."""
+) -> bool:
+    """Render templates inside containers.
+
+    :return: Whether file was updated.
+    :rtype: bool
+    """
+    file_updated = False
+    try:
+        original_contents = (container.pull(config.path).read())
+    except (ops.pebble.PathError, FileNotFoundError):
+        original_contents = None
     loader = get_loader(template_dir, openstack_release)
     _tmpl_env = jinja2.Environment(loader=loader)
     try:
@@ -59,14 +70,21 @@ def sidecar_config_render(
             os.path.basename(config.path)
         )
     contents = template.render(context)
-    kwargs = {
-        "user": config.user,
-        "group": config.group,
-        "permissions": config.permissions}
-    parent_dir = str(Path(config.path).parent)
-    if not container.isdir(parent_dir):
-        container.make_dir(parent_dir, make_parents=True)
-    container.push(config.path, contents, **kwargs)
-    log.debug(
-        f"Wrote template {config.path} in container {container.name}."
-    )
+    if original_contents == contents:
+        log.debug(
+            f"{config.path} in {container.name} matches desired content."
+        )
+    else:
+        kwargs = {
+            "user": config.user,
+            "group": config.group,
+            "permissions": config.permissions}
+        parent_dir = str(Path(config.path).parent)
+        if not container.isdir(parent_dir):
+            container.make_dir(parent_dir, make_parents=True)
+        container.push(config.path, contents, **kwargs)
+        file_updated = True
+        log.debug(
+            f"Wrote template {config.path} in container {container.name}."
+        )
+    return file_updated
