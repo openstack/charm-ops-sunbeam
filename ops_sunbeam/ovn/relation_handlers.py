@@ -14,8 +14,8 @@
 
 """Base classes for defining OVN relation handlers."""
 
-import ipaddress
 import itertools
+import socket
 import logging
 
 from typing import Callable, Dict, Iterator, List
@@ -37,55 +37,35 @@ class OVNRelationUtils():
     DB_NB_CLUSTER_PORT = 6643
     DB_SB_CLUSTER_PORT = 6644
 
-    def _format_addr(self, addr: str) -> str:
-        """Validate and format IP address.
-
-        :param addr: IPv6 or IPv4 address
-        :type addr: str
-        :returns: Address string, optionally encapsulated in brackets ([])
-        :rtype: str
-        :raises: ValueError
-        """
-        ipaddr = ipaddress.ip_address(addr)
-        if isinstance(ipaddr, ipaddress.IPv6Address):
-            fmt = '[{}]'
-        else:
-            fmt = '{}'
-        return fmt.format(ipaddr)
-
-    def _remote_addrs(self, key: str) -> Iterator[str]:
-        """Retrieve addresses published by remote units.
+    def _remote_hostnames(self, key: str) -> Iterator[str]:
+        """Retrieve hostnames published by remote units.
 
         :param key: Relation data key to retrieve value from.
         :type key: str
-        :returns: IPv4 or IPv6 addresses published by remote units.
+        :returns: hostnames published by remote units.
         :rtype: Iterator[str]
         """
-        for addr in self.interface.get_all_unit_values(key):
-            try:
-                addr = self._format_addr(addr)
-                yield addr
-            except ValueError:
-                continue
+        for hostname in self.interface.get_all_unit_values(key):
+            yield hostname
 
     @property
-    def cluster_remote_addrs(self) -> Iterator[str]:
-        """Retrieve remote addresses bound to remote endpoint.
+    def cluster_remote_hostnames(self) -> Iterator[str]:
+        """Retrieve remote hostnames bound to remote endpoint.
 
-        :returns: IPv4 or IPv6 addresses bound to remote endpoints.
+        :returns: hostnames bound to remote endpoints.
         :rtype: Iterator[str]
         """
-        return self._remote_addrs('bound-address')
+        return self._remote_hostnames('bound-hostname')
 
     def db_connection_strs(
             self,
-            addrs: List[ipaddress.IPv4Address],
+            hostnames: List[str],
             port: int,
             proto: str = 'ssl') -> Iterator[str]:
         """Provide connection strings.
 
-        :param addrs: List of addresses to include in conn strs
-        :type addrs: List[ipaddress.IPv4Address]
+        :param hostnames: List of hostnames to include in conn strs
+        :type hostnames: List[str]
         :param port: Port number
         :type port: int
         :param proto: Protocol
@@ -93,8 +73,8 @@ class OVNRelationUtils():
         :returns: connection strings
         :rtype: Iterator[str]
         """
-        for addr in addrs:
-            yield ':'.join((proto, str(addr), str(port)))
+        for hostname in hostnames:
+            yield ':'.join((proto, str(hostname), str(port)))
 
     @property
     def db_nb_port(self) -> int:
@@ -152,7 +132,7 @@ class OVNRelationUtils():
         :returns: OVN Northbound OVSDB connection strings.
         :rtpye: Iterator[str]
         """
-        return self.db_connection_strs(self.cluster_remote_addrs,
+        return self.db_connection_strs(self.cluster_remote_hostnames,
                                        self.db_nb_port)
 
     @property
@@ -162,50 +142,37 @@ class OVNRelationUtils():
         :returns: OVN Southbound OVSDB connection strings.
         :rtpye: Iterator[str]
         """
-        return self.db_connection_strs(self.cluster_remote_addrs,
+        return self.db_connection_strs(self.cluster_remote_hostnames,
                                        self.db_sb_port)
 
     @property
-    def cluster_local_addr(self) -> ipaddress.IPv4Address:
-        """Retrieve local address bound to endpoint.
+    def cluster_local_hostname(self) -> str:
+        """Retrieve local hostname for unit.
 
-        :returns: IPv4 or IPv6 address bound to endpoint
+        :returns: Resolvable hostname for local unit.
         :rtype: str
         """
-        return self._endpoint_local_bound_addr()
-
-    def _endpoint_local_bound_addr(self) -> ipaddress.IPv4Address:
-        """Retrieve local address bound to endpoint.
-
-        :returns: IPv4 or IPv6 address bound to endpoint
-        :rtype: str
-        """
-        addr = None
-        for relation in self.charm.model.relations.get(self.relation_name, []):
-            binding = self.charm.model.get_binding(relation)
-            addr = binding.network.bind_address
-            break
-        return addr
+        return socket.getfqdn()
 
 
 class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
                               OVNRelationUtils):
     """Handle OVN peer relation."""
 
-    def publish_cluster_local_addr(
+    def publish_cluster_local_hostname(
             self,
-            addr: ipaddress.IPv4Address = None) -> Dict:
-        """Announce address on relation.
+            hostname: str = None) -> Dict:
+        """Announce hostname on relation.
 
         This will be used by our peers and clients to build a connection
         string to the remote cluster.
 
-        :param addr: Override address to announce.
-        :type addr: Optional[str]
+        :param hostname: Override hostname to announce.
+        :type hostname: Optional[str]
         """
-        _addr = addr or self.cluster_local_addr
-        if _addr:
-            self.interface.set_unit_data({'bound-address': str(_addr)})
+        _hostname = hostname or self.cluster_local_hostname
+        if _hostname:
+            self.interface.set_unit_data({'bound-hostname': str(_hostname)})
 
     def expected_peers_available(self) -> bool:
         """Whether expected peers have joined and published data on peer rel.
@@ -225,15 +192,15 @@ class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
                 f"Expected {expected_remote_units} but only {joined_units} "
                 "have joined so far")
             return False
-        addresses = self.interface.get_all_unit_values('bound-address')
-        if all(addresses) < expected_remote_units:
+        hostnames = self.interface.get_all_unit_values('bound-hostname')
+        if all(hostnames) < expected_remote_units:
             logging.debug(
-                "Not all units have published a bound-address. Current "
-                f"address list: {addresses}")
+                "Not all units have published a bound-hostname. Current "
+                f"hostname list: {hostnames}")
             return False
         else:
             logging.debug(
-                f"All expected peers are present. Addresses: {addresses}")
+                f"All expected peers are present. Hostnames: {hostnames}")
             return True
 
     @property
@@ -241,15 +208,15 @@ class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
         """Provide Northbound DB connection strings.
 
         We override the parent property because for the peer relation
-        ``cluster_remote_addrs`` does not contain self.
+        ``cluster_remote_hostnames`` does not contain self.
 
         :returns: Northbound DB connection strings
         :rtype: Iterator[str]
         """
         return itertools.chain(
-            self.db_connection_strs((self.cluster_local_addr,),
+            self.db_connection_strs((self.cluster_local_hostname,),
                                     self.db_nb_port),
-            self.db_connection_strs(self.cluster_remote_addrs,
+            self.db_connection_strs(self.cluster_remote_hostnames,
                                     self.db_nb_port))
 
     @property
@@ -257,15 +224,15 @@ class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
         """Provide Northbound DB Cluster connection strings.
 
         We override the parent property because for the peer relation
-        ``cluster_remote_addrs`` does not contain self.
+        ``cluster_remote_hostnames`` does not contain self.
 
         :returns: Northbound DB connection strings
         :rtype: Iterator[str]
         """
         return itertools.chain(
-            self.db_connection_strs((self.cluster_local_addr,),
+            self.db_connection_strs((self.cluster_local_hostname,),
                                     self.db_nb_cluster_port),
-            self.db_connection_strs(self.cluster_remote_addrs,
+            self.db_connection_strs(self.cluster_remote_hostnames,
                                     self.db_nb_cluster_port))
 
     @property
@@ -273,15 +240,15 @@ class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
         """Provide Southbound DB Cluster connection strings.
 
         We override the parent property because for the peer relation
-        ``cluster_remote_addrs`` does not contain self.
+        ``cluster_remote_hostnames`` does not contain self.
 
         :returns: Southbound DB connection strings
         :rtype: Iterator[str]
         """
         return itertools.chain(
-            self.db_connection_strs((self.cluster_local_addr,),
+            self.db_connection_strs((self.cluster_local_hostname,),
                                     self.db_sb_cluster_port),
-            self.db_connection_strs(self.cluster_remote_addrs,
+            self.db_connection_strs(self.cluster_remote_hostnames,
                                     self.db_sb_cluster_port))
 
     @property
@@ -289,7 +256,7 @@ class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
         """Provide Southbound DB connection strings.
 
         We override the parent property because for the peer relation
-        ``cluster_remote_addrs`` does not contain self.  We use a different
+        ``cluster_remote_hostnames`` does not contain self.  We use a different
         port for connecting to the SB DB as there is currently no RBAC profile
         that provide the privileges ``ovn-northd`` requires to operate.
 
@@ -297,22 +264,22 @@ class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
         :rtype: Iterator[str]
         """
         return itertools.chain(
-            self.db_connection_strs((self.cluster_local_addr,),
+            self.db_connection_strs((self.cluster_local_hostname,),
                                     self.db_sb_admin_port),
-            self.db_connection_strs(self.cluster_remote_addrs,
+            self.db_connection_strs(self.cluster_remote_hostnames,
                                     self.db_sb_admin_port))
 
     def _on_peers_relation_joined(
             self, event: ops.framework.EventBase) -> None:
         """Process peer joined event."""
-        self.publish_cluster_local_addr()
+        self.publish_cluster_local_hostname()
 
     def context(self) -> dict:
         """Context from relation data."""
         ctxt = super().context()
         ctxt.update({
-            'cluster_local_addr': self.cluster_local_addr,
-            'cluster_remote_addrs': self.cluster_remote_addrs,
+            'cluster_local_hostname': self.cluster_local_hostname,
+            'cluster_remote_hostnames': self.cluster_remote_hostnames,
             'db_nb_cluster_connection_strs':
                 self.db_nb_cluster_connection_strs,
             'db_sb_cluster_connection_strs':
@@ -357,10 +324,9 @@ class OVSDBCMSProvidesHandler(sunbeam_rhandlers.RelationHandler,
         """Handle OVSDB CMS change events."""
         # Ready is only emitted when the interface considers
         # that the relation is complete (indicated by a password)
-        # _addr = addr or self.cluster_local_addr
+        # _hostname = hostname or self.cluster_local_hostname
         self.interface.set_unit_data(
-            {
-                'bound-address': str(self.cluster_local_addr)})
+            {'bound-hostname': str(self.cluster_local_hostname)})
         self.callback_f(event)
 
     @property
@@ -411,8 +377,8 @@ class OVSDBCMSRequiresHandler(sunbeam_rhandlers.RelationHandler,
         """Context from relation data."""
         ctxt = super().context()
         ctxt.update({
-            'local_address': self._endpoint_local_bound_addr(),
-            'addresses': self.interface.bound_addresses(),
+            'local_hostname': self.cluster_local_hostname,
+            'hostnames': self.interface.bound_hostnames(),
             'db_sb_connection_strs': ','.join(self.db_sb_connection_strs),
             'db_nb_connection_strs': ','.join(self.db_nb_connection_strs)})
 
