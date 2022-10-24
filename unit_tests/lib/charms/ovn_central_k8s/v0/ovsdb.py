@@ -37,7 +37,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 3
 
 
 # TODO: add your code here! Happy coding!
@@ -101,11 +101,14 @@ class OVSDBCMSRequires(Object):
         logging.debug("OVSDBCMSRequires on_joined")
         self.on.connected.emit()
 
+    def bound_hostnames(self):
+        return self.get_all_unit_values("bound-hostname")
+
     def bound_addresses(self):
         return self.get_all_unit_values("bound-address")
 
     def remote_ready(self):
-        return all(self.bound_addresses())
+        return all(self.bound_hostnames()) or all(self.bound_addresses())
 
     def _on_ovsdb_cms_relation_changed(self, event):
         """OVSDBCMS relation changed."""
@@ -201,5 +204,3 @@ class OVSDBCMSProvides(Object):
         for relation in relations:
             for k, v in settings.items():
                 relation.data[self.model.unit][k] = v
-
-

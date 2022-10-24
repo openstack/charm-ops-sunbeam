@@ -14,6 +14,7 @@
 
 """Base classes for defining OVN relation handlers."""
 
+import ipaddress
 import itertools
 import socket
 import logging
@@ -37,6 +38,37 @@ class OVNRelationUtils():
     DB_NB_CLUSTER_PORT = 6643
     DB_SB_CLUSTER_PORT = 6644
 
+    def _format_addr(self, addr: str) -> str:
+        """Validate and format IP address.
+
+        :param addr: IPv6 or IPv4 address
+        :type addr: str
+        :returns: Address string, optionally encapsulated in brackets ([])
+        :rtype: str
+        :raises: ValueError
+        """
+        ipaddr = ipaddress.ip_address(addr)
+        if isinstance(ipaddr, ipaddress.IPv6Address):
+            fmt = '[{}]'
+        else:
+            fmt = '{}'
+        return fmt.format(ipaddr)
+
+    def _remote_addrs(self, key: str) -> Iterator[str]:
+        """Retrieve addresses published by remote units.
+
+        :param key: Relation data key to retrieve value from.
+        :type key: str
+        :returns: addresses published by remote units.
+        :rtype: Iterator[str]
+        """
+        for addr in self.interface.get_all_unit_values(key):
+            try:
+                addr = self._format_addr(addr)
+                yield addr
+            except ValueError:
+                continue
+
     def _remote_hostnames(self, key: str) -> Iterator[str]:
         """Retrieve hostnames published by remote units.
 
@@ -56,6 +88,15 @@ class OVNRelationUtils():
         :rtype: Iterator[str]
         """
         return self._remote_hostnames('bound-hostname')
+
+    @property
+    def cluster_remote_addrs(self) -> Iterator[str]:
+        """Retrieve remote addresses bound to remote endpoint.
+
+        :returns: addresses bound to remote endpoints.
+        :rtype: Iterator[str]
+        """
+        return self._remote_addrs('bound-address')
 
     def db_connection_strs(
             self,
@@ -132,7 +173,7 @@ class OVNRelationUtils():
         :returns: OVN Northbound OVSDB connection strings.
         :rtpye: Iterator[str]
         """
-        return self.db_connection_strs(self.cluster_remote_hostnames,
+        return self.db_connection_strs(self.cluster_remote_addrs,
                                        self.db_nb_port)
 
     @property
@@ -142,8 +183,37 @@ class OVNRelationUtils():
         :returns: OVN Southbound OVSDB connection strings.
         :rtpye: Iterator[str]
         """
+        return self.db_connection_strs(self.cluster_remote_addrs,
+                                       self.db_sb_port)
+
+    @property
+    def db_nb_connection_hostname_strs(self) -> Iterator[str]:
+        """Provide OVN Northbound OVSDB connection strings.
+
+        :returns: OVN Northbound OVSDB connection strings.
+        :rtpye: Iterator[str]
+        """
+        return self.db_connection_strs(self.cluster_remote_hostnames,
+                                       self.db_nb_port)
+
+    @property
+    def db_sb_connection_hostname_strs(self) -> Iterator[str]:
+        """Provide OVN Southbound OVSDB connection strings.
+
+        :returns: OVN Southbound OVSDB connection strings.
+        :rtpye: Iterator[str]
+        """
         return self.db_connection_strs(self.cluster_remote_hostnames,
                                        self.db_sb_port)
+
+    @property
+    def cluster_local_addr(self) -> ipaddress.IPv4Address:
+        """Retrieve local address bound to endpoint.
+
+        :returns: IPv4 or IPv6 address bound to endpoint
+        :rtype: str
+        """
+        return self._endpoint_local_bound_addr()
 
     @property
     def cluster_local_hostname(self) -> str:
@@ -153,6 +223,18 @@ class OVNRelationUtils():
         :rtype: str
         """
         return socket.getfqdn()
+
+    def _endpoint_local_bound_addr(self) -> ipaddress.IPv4Address:
+        """Retrieve local address bound to endpoint.
+
+        :returns: IPv4 or IPv6 address bound to endpoint
+        """
+        addr = None
+        for relation in self.charm.model.relations.get(self.relation_name, []):
+            binding = self.charm.model.get_binding(relation)
+            addr = binding.network.bind_address
+            break
+        return addr
 
 
 class OVNDBClusterPeerHandler(sunbeam_rhandlers.BasePeerHandler,
@@ -325,8 +407,10 @@ class OVSDBCMSProvidesHandler(sunbeam_rhandlers.RelationHandler,
         # Ready is only emitted when the interface considers
         # that the relation is complete (indicated by a password)
         # _hostname = hostname or self.cluster_local_hostname
-        self.interface.set_unit_data(
-            {'bound-hostname': str(self.cluster_local_hostname)})
+        self.interface.set_unit_data({
+            'bound-hostname': str(self.cluster_local_hostname),
+            'bound-address': str(self.cluster_local_addr),
+        })
         self.callback_f(event)
 
     @property
@@ -379,7 +463,14 @@ class OVSDBCMSRequiresHandler(sunbeam_rhandlers.RelationHandler,
         ctxt.update({
             'local_hostname': self.cluster_local_hostname,
             'hostnames': self.interface.bound_hostnames(),
+            'local_address': self.cluster_local_addr,
+            'addresses': self.interface.bound_addresses(),
             'db_sb_connection_strs': ','.join(self.db_sb_connection_strs),
-            'db_nb_connection_strs': ','.join(self.db_nb_connection_strs)})
+            'db_nb_connection_strs': ','.join(self.db_nb_connection_strs),
+            'db_sb_connection_hostname_strs':
+                ','.join(self.db_sb_connection_hostname_strs),
+            'db_nb_connection_hostname_strs':
+                ','.join(self.db_nb_connection_hostname_strs)
+        })
 
         return ctxt
