@@ -386,6 +386,7 @@ class OVSDBCMSProvidesHandler(sunbeam_rhandlers.RelationHandler,
     ) -> None:
         """Run constructor."""
         super().__init__(charm, relation_name, callback_f, mandatory)
+        self._update_address_data()
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Identity service relation."""
@@ -404,14 +405,14 @@ class OVSDBCMSProvidesHandler(sunbeam_rhandlers.RelationHandler,
 
     def _on_ovsdb_service_ready(self, event: ops.framework.EventBase) -> None:
         """Handle OVSDB CMS change events."""
-        # Ready is only emitted when the interface considers
-        # that the relation is complete (indicated by a password)
-        # _hostname = hostname or self.cluster_local_hostname
+        self.callback_f(event)
+
+    def _update_address_data(self) -> None:
+        """Update hostname and IP address data on all relations."""
         self.interface.set_unit_data({
             'bound-hostname': str(self.cluster_local_hostname),
             'bound-address': str(self.cluster_local_addr),
         })
-        self.callback_f(event)
 
     @property
     def ready(self) -> bool:
