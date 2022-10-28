@@ -80,13 +80,13 @@ class RelationHandler(ops.charm.Object):
         """
         if not self.model.relations.get(self.relation_name):
             if self.mandatory:
-                status.set(BlockedStatus("relation missing"))
+                status.set(BlockedStatus("integration missing"))
             else:
                 status.set(UnknownStatus())
         elif self.ready:
             status.set(ActiveStatus(""))
         else:
-            status.set(WaitingStatus("relation incomplete"))
+            status.set(WaitingStatus("integration incomplete"))
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for the relation.
