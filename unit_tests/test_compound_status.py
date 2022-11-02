@@ -153,6 +153,7 @@ class TestCompoundStatus(test_utils.CharmTestCase):
     def test_all_active_status(self) -> None:
         """Should not be issues if add same status twice."""
         pool = self.harness.charm.status_pool
+        self.harness.charm.bootstrap_status.set(ActiveStatus())
 
         status1 = compound_status.Status("test1")
         pool.add(status1)

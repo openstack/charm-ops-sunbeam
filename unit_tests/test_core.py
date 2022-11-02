@@ -20,6 +20,8 @@ import sys
 sys.path.append('lib')  # noqa
 sys.path.append('src')  # noqa
 
+import ops.model
+
 import ops_sunbeam.charm as sunbeam_charm
 import ops_sunbeam.test_utils as test_utils
 from . import test_charms
@@ -157,6 +159,26 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
             user='root',
             group='root',
         )
+
+    def test_assess_status(self) -> None:
+        """Test charm is setting status correctly."""
+        test_utils.add_complete_ingress_relation(self.harness)
+        self.harness.set_leader()
+        test_utils.add_complete_peer_relation(self.harness)
+        self.harness.charm.leader_set({'foo': 'bar'})
+        test_utils.add_api_relations(self.harness)
+        test_utils.add_complete_cloud_credentials_relation(self.harness)
+        self.harness.set_can_connect('my-service', True)
+        self.assertNotEqual(
+            self.harness.charm.status.status,
+            ops.model.ActiveStatus())
+        self.set_pebble_ready()
+        for ph in self.harness.charm.pebble_handlers:
+            self.assertTrue(ph.service_ready)
+
+        self.assertEqual(
+            self.harness.charm.status.status,
+            ops.model.ActiveStatus())
 
     def test_start_services(self) -> None:
         """Test service is started."""

@@ -38,7 +38,7 @@ import ops.framework
 import ops.model
 import ops.pebble
 
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, MaintenanceStatus
 
 from lightkube import Client
 from lightkube.resources.core_v1 import Service
@@ -70,6 +70,13 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self.status_pool = compound_status.StatusPool(self)
         self.status_pool.add(self.status)
         self._state.set_default(bootstrapped=False)
+        self.bootstrap_status = compound_status.Status(
+            "bootstrap",
+            priority=90)
+        self.status_pool.add(self.bootstrap_status)
+        if not self.bootstrapped():
+            self.bootstrap_status.set(MaintenanceStatus(
+                "Service not bootstrapped"))
         self.relation_handlers = self.get_relation_handlers()
         self.pebble_handlers = self.get_pebble_handlers()
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -109,7 +116,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 "amqp" in self.mandatory_relations,
             )
             handlers.append(self.amqp)
-
         self.dbs = {}
         for relation_name, database_name in self.databases.items():
             if self.can_add_handler(relation_name, handlers):
@@ -422,6 +428,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """
         try:
             self.run_db_sync()
+            self.bootstrap_status.set(ActiveStatus())
             return True
         except ops.pebble.ExecError as e:
             logger.exception('Failed to bootstrap')
