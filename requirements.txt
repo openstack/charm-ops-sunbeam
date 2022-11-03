@@ -1,4 +1,3 @@
-charmhelpers
 jinja2
 jsonschema
 kubernetes

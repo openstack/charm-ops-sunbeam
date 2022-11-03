@@ -31,9 +31,6 @@ if TYPE_CHECKING:
     import ops.model
 
 import jinja2
-from charmhelpers.contrib.openstack.templating import (
-    get_loader,
-)
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +63,7 @@ def sidecar_config_render(
         original_contents = container.pull(config.path).read()
     except (ops.pebble.PathError, FileNotFoundError):
         original_contents = None
-    loader = get_loader(template_dir, openstack_release)
+    loader = jinja2.FileSystemLoader(template_dir)
     _tmpl_env = jinja2.Environment(loader=loader)
     try:
         template = _tmpl_env.get_template(

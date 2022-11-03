@@ -34,19 +34,20 @@ import ops_sunbeam.test_utils as test_utils
 class TestTemplating(test_utils.CharmTestCase):
     """Tests for ops_sunbeam.templating.."""
 
-    PATCHES = ["get_loader"]
+    PATCHES = []
 
     def setUp(self) -> None:
         """Charm test class setup."""
         super().setUp(sunbeam_templating, self.PATCHES)
 
-    def test_render(self) -> None:
+    @mock.patch("jinja2.FileSystemLoader")
+    def test_render(self, fs_loader: "jinja2.FileSystemLoader") -> None:
         """Check rendering templates."""
         container_mock = mock.MagicMock()
         config = sunbeam_core.ContainerConfigFile(
             "/tmp/testfile.txt", "myuser", "mygrp"
         )
-        self.get_loader.return_value = jinja2.DictLoader(
+        fs_loader.return_value = jinja2.DictLoader(
             {"testfile.txt": "debug = {{ debug }}"}
         )
         sunbeam_templating.sidecar_config_render(
@@ -60,7 +61,10 @@ class TestTemplating(test_utils.CharmTestCase):
             permissions=None,
         )
 
-    def test_render_no_change(self) -> None:
+    @mock.patch("jinja2.FileSystemLoader")
+    def test_render_no_change(
+        self, fs_loader: "jinja2.FileSystemLoader"
+    ) -> None:
         """Check rendering template with no content change."""
         container_mock = mock.MagicMock()
         container_mock.pull.return_value = TextIOWrapper(
@@ -69,7 +73,7 @@ class TestTemplating(test_utils.CharmTestCase):
         config = sunbeam_core.ContainerConfigFile(
             "/tmp/testfile.txt", "myuser", "mygrp"
         )
-        self.get_loader.return_value = jinja2.DictLoader(
+        fs_loader.return_value = jinja2.DictLoader(
             {"testfile.txt": "debug = {{ debug }}"}
         )
         sunbeam_templating.sidecar_config_render(
