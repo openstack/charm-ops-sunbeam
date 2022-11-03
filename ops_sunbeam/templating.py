@@ -50,7 +50,6 @@ def sidecar_config_render(
     container: "ops.model.Container",
     config: "sunbeam_core.ContainerConfigFile",
     template_dir: str,
-    openstack_release: str,
     context: "sunbeam_core.OPSCharmContexts",
 ) -> bool:
     """Render templates inside containers.

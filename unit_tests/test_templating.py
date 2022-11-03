@@ -51,7 +51,7 @@ class TestTemplating(test_utils.CharmTestCase):
             {"testfile.txt": "debug = {{ debug }}"}
         )
         sunbeam_templating.sidecar_config_render(
-            container_mock, config, "/tmp/templates", "essex", {"debug": True}
+            container_mock, config, "/tmp/templates", {"debug": True}
         )
         container_mock.push.assert_called_once_with(
             "/tmp/testfile.txt",
@@ -77,6 +77,6 @@ class TestTemplating(test_utils.CharmTestCase):
             {"testfile.txt": "debug = {{ debug }}"}
         )
         sunbeam_templating.sidecar_config_render(
-            container_mock, config, "/tmp/templates", "essex", {"debug": True}
+            container_mock, config, "/tmp/templates", {"debug": True}
         )
         self.assertFalse(container_mock.push.called)

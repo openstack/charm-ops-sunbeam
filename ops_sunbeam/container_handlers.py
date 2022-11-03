@@ -60,7 +60,6 @@ class PebbleHandler(ops.charm.Object):
         service_name: str,
         container_configs: List[sunbeam_core.ContainerConfigFile],
         template_dir: str,
-        openstack_release: str,
         callback_f: Callable,
     ) -> None:
         """Run constructor."""
@@ -73,7 +72,6 @@ class PebbleHandler(ops.charm.Object):
         self.container_configs = container_configs
         self.container_configs.extend(self.default_container_configs())
         self.template_dir = template_dir
-        self.openstack_release = openstack_release
         self.callback_f = callback_f
         self.setup_pebble_handler()
 
@@ -120,7 +118,6 @@ class PebbleHandler(ops.charm.Object):
                     container,
                     config,
                     self.template_dir,
-                    self.openstack_release,
                     context,
                 )
                 if changed:
@@ -348,7 +345,6 @@ class WSGIPebbleHandler(PebbleHandler):
         service_name: str,
         container_configs: List[sunbeam_core.ContainerConfigFile],
         template_dir: str,
-        openstack_release: str,
         callback_f: Callable,
         wsgi_service_name: str,
     ) -> None:
@@ -359,7 +355,6 @@ class WSGIPebbleHandler(PebbleHandler):
             service_name,
             container_configs,
             template_dir,
-            openstack_release,
             callback_f,
         )
         self.wsgi_service_name = wsgi_service_name

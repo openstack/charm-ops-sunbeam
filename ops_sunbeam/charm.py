@@ -203,7 +203,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self.service_name,
                 self.container_configs,
                 self.template_dir,
-                self.openstack_release,
                 self.configure_charm,
             )
         ]
@@ -619,7 +618,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                 self.service_name,
                 self.container_configs,
                 self.template_dir,
-                self.openstack_release,
                 self.configure_charm,
                 f"wsgi-{self.service_name}",
             )

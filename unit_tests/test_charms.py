@@ -138,7 +138,6 @@ resources:
 class MyCharm(sunbeam_charm.OSBaseOperatorCharm):
     """Test charm for testing OSBaseOperatorCharm."""
 
-    openstack_release = "diablo"
     service_name = "my-service"
 
     def __init__(self, framework: "ops.framework.Framework") -> None:
@@ -203,7 +202,6 @@ TEMPLATE_CONTENTS = """
 class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
     """Test charm for testing OSBaseOperatorAPICharm."""
 
-    openstack_release = "diablo"
     service_name = "my-service"
     wsgi_admin_script = "/bin/wsgi_admin"
     wsgi_public_script = "/bin/wsgi_public"
@@ -304,7 +302,6 @@ class TestMultiSvcCharm(MyAPICharm):
                 self.service_name,
                 self.container_configs,
                 self.template_dir,
-                self.openstack_release,
                 self.configure_charm,
             )
         ]
