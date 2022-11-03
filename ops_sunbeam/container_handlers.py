@@ -21,17 +21,25 @@ in the container.
 
 import collections
 import logging
+from collections.abc import (
+    Callable,
+)
+from typing import (
+    List,
+    TypedDict,
+)
+
+import ops.charm
+import ops.pebble
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    WaitingStatus,
+)
 
 import ops_sunbeam.compound_status as compound_status
 import ops_sunbeam.core as sunbeam_core
 import ops_sunbeam.templating as sunbeam_templating
-import ops.charm
-import ops.pebble
-
-from ops.model import ActiveStatus, WaitingStatus, BlockedStatus
-
-from collections.abc import Callable
-from typing import List, TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +81,7 @@ class PebbleHandler(ops.charm.Object):
         self.charm.status_pool.add(self.status)
 
         self.framework.observe(
-            self.charm.on.update_status,
-            self._on_update_status
+            self.charm.on.update_status, self._on_update_status
         )
 
     def setup_pebble_handler(self) -> None:
@@ -150,10 +157,8 @@ class PebbleHandler(ops.charm.Object):
             for d in self.directories:
                 logging.debug(f"Creating {d.path}")
                 container.make_dir(
-                    d.path,
-                    user=d.user,
-                    group=d.group,
-                    make_parents=True)
+                    d.path, user=d.user, group=d.group, make_parents=True
+                )
 
     def init_service(self, context: sunbeam_core.OPSCharmContexts) -> None:
         """Initialise service ready for use.
@@ -179,9 +184,7 @@ class PebbleHandler(ops.charm.Object):
     @property
     def pebble_ready(self) -> bool:
         """Determine if pebble is running and ready for use."""
-        return self.charm.unit.get_container(
-            self.container_name
-        ).can_connect()
+        return self.charm.unit.get_container(self.container_name).can_connect()
 
     @property
     def config_pushed(self) -> bool:
@@ -193,8 +196,9 @@ class PebbleHandler(ops.charm.Object):
         """Determine whether the service the container provides is running."""
         return self._state.service_ready
 
-    def execute(self, cmd: List, exception_on_error: bool = False,
-                **kwargs: TypedDict) -> str:
+    def execute(
+        self, cmd: List, exception_on_error: bool = False, **kwargs: TypedDict
+    ) -> str:
         """Execute given command in container managed by this handler.
 
         :param cmd: command to execute, specified as a list of strings
@@ -211,15 +215,15 @@ class PebbleHandler(ops.charm.Object):
             stdout, _ = process.wait_output()
             # Not logging the command in case it included a password,
             # too cautious ?
-            logger.debug('Command complete')
+            logger.debug("Command complete")
             if stdout:
                 for line in stdout.splitlines():
-                    logger.debug('    %s', line)
+                    logger.debug("    %s", line)
             return stdout
         except ops.pebble.ExecError as e:
-            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():
-                logger.error('    %s', line)
+                logger.error("    %s", line)
             if exception_on_error:
                 raise
 
@@ -236,7 +240,8 @@ class PebbleHandler(ops.charm.Object):
             if not plan.checks:
                 logger.debug("Adding healthcheck layer to the plan")
                 container.add_layer(
-                    "healthchecks", healthcheck_layer, combine=True)
+                    "healthchecks", healthcheck_layer, combine=True
+                )
         except ops.pebble.ConnectionError as connect_error:
             logger.error("Not able to add Healthcheck layer")
             logger.exception(connect_error)
@@ -263,17 +268,19 @@ class PebbleHandler(ops.charm.Object):
 
         # Verify alive checks if ready checks are missing
         if not checks:
-            checks = container.get_checks(
-                level=ops.pebble.CheckLevel.ALIVE)
+            checks = container.get_checks(level=ops.pebble.CheckLevel.ALIVE)
             for name, check in checks.items():
                 if check.status != ops.pebble.CheckStatus.UP:
                     failed.append(name)
 
         if failed:
-            self.status.set(BlockedStatus('healthcheck{} failed: {}'.format(
-                's' if len(failed) > 1 else '',
-                ', '.join(failed)
-            )))
+            self.status.set(
+                BlockedStatus(
+                    "healthcheck{} failed: {}".format(
+                        "s" if len(failed) > 1 else "", ", ".join(failed)
+                    )
+                )
+            )
             return
 
         self.status.set(ActiveStatus(""))
@@ -288,9 +295,10 @@ class PebbleHandler(ops.charm.Object):
         for service_name, service in services.items():
             if service.is_running() and restart:
                 logger.debug(
-                    f'Stopping {service_name} in {self.container_name}')
+                    f"Stopping {service_name} in {self.container_name}"
+                )
                 container.stop(service_name)
-            logger.debug(f'Starting {service_name} in {self.container_name}')
+            logger.debug(f"Starting {service_name} in {self.container_name}")
             container.start(service_name)
 
 
@@ -318,14 +326,15 @@ class ServicePebbleHandler(PebbleHandler):
         """
         container = self.charm.unit.get_container(self.container_name)
         if not container:
-            logger.debug(f'{self.container_name} container is not ready. '
-                         'Cannot start service.')
+            logger.debug(
+                f"{self.container_name} container is not ready. "
+                "Cannot start service."
+            )
             return
         if self.service_name not in container.get_services().keys():
             container.add_layer(
-                self.service_name,
-                self.get_layer(),
-                combine=True)
+                self.service_name, self.get_layer(), combine=True
+            )
         self._start_all(restart=restart)
 
 
@@ -369,9 +378,8 @@ class WSGIPebbleHandler(PebbleHandler):
             return
         if self.wsgi_service_name not in container.get_services().keys():
             container.add_layer(
-                self.service_name,
-                self.get_layer(),
-                combine=True)
+                self.service_name, self.get_layer(), combine=True
+            )
         self._start_all(restart=restart)
 
     def start_service(self) -> None:
@@ -409,16 +417,12 @@ class WSGIPebbleHandler(PebbleHandler):
                     "period": "10s",
                     "timeout": "3s",
                     "threshold": 3,
-                    "exec": {
-                        "command": "service apache2 status"
-                    }
+                    "exec": {"command": "service apache2 status"},
                 },
                 "online": {
                     "override": "replace",
                     "level": "ready",
-                    "http": {
-                        "url": self.charm.healthcheck_http_url
-                    }
+                    "http": {"url": self.charm.healthcheck_http_url},
                 },
             }
         }
@@ -429,13 +433,13 @@ class WSGIPebbleHandler(PebbleHandler):
         files_changed = self.write_config(context)
         try:
             process = container.exec(
-                ['a2ensite', self.wsgi_service_name],
-                timeout=5*60)
+                ["a2ensite", self.wsgi_service_name], timeout=5 * 60
+            )
             out, warnings = process.wait_output()
             if warnings:
                 for line in warnings.splitlines():
-                    logger.warning('a2ensite warn: %s', line.strip())
-            logging.debug(f'Output from a2ensite: \n{out}')
+                    logger.warning("a2ensite warn: %s", line.strip())
+            logging.debug(f"Output from a2ensite: \n{out}")
         except ops.pebble.ExecError:
             logger.exception(
                 f"Failed to enable {self.wsgi_service_name} site in apache"
@@ -459,7 +463,5 @@ class WSGIPebbleHandler(PebbleHandler):
     ) -> List[sunbeam_core.ContainerConfigFile]:
         """Container configs for WSGI service."""
         return [
-            sunbeam_core.ContainerConfigFile(
-                self.wsgi_conf, "root", "root"
-            )
+            sunbeam_core.ContainerConfigFile(self.wsgi_conf, "root", "root")
         ]

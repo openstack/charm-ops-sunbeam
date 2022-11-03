@@ -16,21 +16,33 @@
 
 import json
 import logging
-import cryptography.hazmat.primitives.serialization as serialization
-from typing import Callable, List, Tuple, Optional
-from urllib.parse import urlparse
+from typing import (
+    Callable,
+    List,
+    Optional,
+    Tuple,
+)
+from urllib.parse import (
+    urlparse,
+)
 
+import cryptography.hazmat.primitives.serialization as serialization
 import ops.charm
 import ops.framework
-from ops.model import BlockedStatus, ActiveStatus, WaitingStatus, UnknownStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    UnknownStatus,
+    WaitingStatus,
+)
 
-import ops_sunbeam.interfaces as sunbeam_interfaces
 import ops_sunbeam.compound_status as compound_status
+import ops_sunbeam.interfaces as sunbeam_interfaces
 
 logger = logging.getLogger(__name__)
 
 ERASURE_CODED = "erasure-coded"
-REPLICATED = "replacated"
+REPLICATED = "replicated"
 
 
 class RelationHandler(ops.charm.Object):
@@ -42,9 +54,9 @@ class RelationHandler(ops.charm.Object):
     1) Registering handlers to process events from the interface. The last
        step of these handlers is to make a callback to a specified method
        within the charm `callback_f`
-    2) Expose a `ready` property so the charm can check a relations readyness
+    2) Expose a `ready` property so the charm can check a relations readiness
     3) A `context` method which returns a dict which pulls together data
-       recieved and sent on an interface.
+       received and sent on an interface.
     """
 
     def __init__(
@@ -59,7 +71,7 @@ class RelationHandler(ops.charm.Object):
             charm,
             # Ensure we can have multiple instances of a relation handler,
             # but only one per relation.
-            key=type(self).__name__ + '_' + relation_name
+            key=type(self).__name__ + "_" + relation_name,
         )
         self.charm = charm
         self.relation_name = relation_name
@@ -71,8 +83,7 @@ class RelationHandler(ops.charm.Object):
         self.set_status(status)
 
     def set_status(self, status: compound_status.Status) -> None:
-        """
-        Set the status based on current state.
+        """Set the status based on current state.
 
         Will be called once, during construction,
         after everything else is initialised.
@@ -148,37 +159,34 @@ class IngressHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Ingress relation."""
         logger.debug("Setting up ingress event handler")
-        from charms.traefik_k8s.v1.ingress import IngressPerAppRequirer
+        from charms.traefik_k8s.v1.ingress import (
+            IngressPerAppRequirer,
+        )
+
         interface = IngressPerAppRequirer(
             self.charm,
             self.relation_name,
             port=self.default_ingress_port,
         )
-        self.framework.observe(
-            interface.on.ready, self._on_ingress_ready
-        )
-        self.framework.observe(
-            interface.on.revoked, self._on_ingress_revoked
-        )
+        self.framework.observe(interface.on.ready, self._on_ingress_ready)
+        self.framework.observe(interface.on.revoked, self._on_ingress_revoked)
         return interface
 
     def _on_ingress_ready(self, event) -> None:  # noqa: ANN001
-        """
-        Handle ingress relation changed events.
+        """Handle ingress relation changed events.
 
         `event` is an instance of
         `charms.traefik_k8s.v1.ingress.IngressPerAppReadyEvent`.
         """
         url = self.url
-        logger.debug(f'Received url: {url}')
+        logger.debug(f"Received url: {url}")
         if not url:
             return
 
         self.callback_f(event)
 
     def _on_ingress_revoked(self, event) -> None:  # noqa: ANN001
-        """
-        Handle ingress relation revoked event.
+        """Handle ingress relation revoked event.
 
         `event` is an instance of
         `charms.traefik_k8s.v1.ingress.IngressPerAppRevokedEvent`
@@ -207,7 +215,7 @@ class IngressHandler(RelationHandler):
         """Context containing ingress data."""
         parse_result = urlparse(self.url)
         return {
-            'ingress_path': parse_result.path,
+            "ingress_path": parse_result.path,
         }
 
 
@@ -242,26 +250,29 @@ class DBHandler(RelationHandler):
         # with a charm that doesn't want a DBHandler
         # and doesn't install this database_requires library.
         from charms.data_platform_libs.v0.database_requires import (
-            DatabaseRequires
+            DatabaseRequires,
         )
+
         # Alias is required to events for this db
         # from trigger handlers for other dbs.
         # It also must be a valid python identifier.
         alias = self.relation_name.replace("-", "_")
         db = DatabaseRequires(
-            self.charm, self.relation_name, self.database_name,
-            relations_aliases=[alias]
+            self.charm,
+            self.relation_name,
+            self.database_name,
+            relations_aliases=[alias],
         )
         self.framework.observe(
             # db.on[f"{alias}_database_created"], # this doesn't work because:
             # RuntimeError: Framework.observe requires a BoundEvent as
             # second parameter, got <ops.framework.PrefixedEvents object ...
             getattr(db.on, f"{alias}_database_created"),
-            self._on_database_updated
+            self._on_database_updated,
         )
         self.framework.observe(
             getattr(db.on, f"{alias}_endpoints_changed"),
-            self._on_database_updated
+            self._on_database_updated,
         )
         # this will be set to self.interface in parent class
         return db
@@ -289,9 +300,9 @@ class DBHandler(RelationHandler):
         """Whether the handler is ready for use."""
         data = self.get_relation_data()
         return bool(
-            data.get("endpoints") and
-            data.get("username") and
-            data.get("password")
+            data.get("endpoints")
+            and data.get("username")
+            and data.get("password")
         )
 
     def context(self) -> dict:
@@ -356,6 +367,7 @@ class RabbitMQHandler(RelationHandler):
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
         import charms.rabbitmq_k8s.v0.rabbitmq as sunbeam_rabbitmq
+
         amqp = sunbeam_rabbitmq.RabbitMQRequires(
             self.charm, self.relation_name, self.username, self.vhost
         )
@@ -433,6 +445,7 @@ class IdentityServiceRequiresHandler(RelationHandler):
         """Configure event handlers for an Identity service relation."""
         logger.debug("Setting up Identity Service event handler")
         import charms.keystone_k8s.v0.identity_service as sun_id
+
         id_svc = sun_id.IdentityServiceRequires(
             self.charm, self.relation_name, self.service_endpoints, self.region
         )
@@ -486,7 +499,8 @@ class BasePeerHandler(RelationHandler):
         return peer_int
 
     def _on_peers_relation_joined(
-            self, event: ops.framework.EventBase) -> None:
+        self, event: ops.framework.EventBase
+    ) -> None:
         """Process peer joined event."""
         self.callback_f(event)
 
@@ -503,8 +517,9 @@ class BasePeerHandler(RelationHandler):
         """Return all app data set on the peer relation."""
         try:
             _db = {
-                k.replace('-', '_'): v
-                for k, v in self.interface.get_all_app_data().items()}
+                k.replace("-", "_"): v
+                for k, v in self.interface.get_all_app_data().items()
+            }
             return _db
         except AttributeError:
             return {}
@@ -563,6 +578,7 @@ class CephClientHandler(RelationHandler):
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
         import interface_ceph_client.ceph_client as ceph_client
+
         ceph = ceph_client.CephClientRequires(
             self.charm,
             self.relation_name,
@@ -570,9 +586,7 @@ class CephClientHandler(RelationHandler):
         self.framework.observe(
             ceph.on.pools_available, self._on_pools_available
         )
-        self.framework.observe(
-            ceph.on.broker_available, self.request_pools
-        )
+        self.framework.observe(ceph.on.broker_available, self.request_pools)
         return ceph
 
     def _on_pools_available(self, event: ops.framework.EventBase) -> None:
@@ -582,8 +596,7 @@ class CephClientHandler(RelationHandler):
         self.callback_f(event)
 
     def request_pools(self, event: ops.framework.EventBase) -> None:
-        """
-        Request Ceph pool creation when interface broker is ready.
+        """Request Ceph pool creation when interface broker is ready.
 
         The default handler will automatically request erasure-coded
         or replicated pools depending on the configuration of the
@@ -595,9 +608,9 @@ class CephClientHandler(RelationHandler):
         """
         config = self.model.config.get
         data_pool_name = (
-            config("rbd-pool-name") or
-            config("rbd-pool") or
-            self.charm.app.name
+            config("rbd-pool-name")
+            or config("rbd-pool")
+            or self.charm.app.name
         )
         metadata_pool_name = (
             config("ec-rbd-metadata-pool") or f"{self.charm.app.name}-metadata"
@@ -628,7 +641,7 @@ class CephClientHandler(RelationHandler):
             # but is in effect driven by the number of rbd's rather than
             # their size - so it can be very lightweight.
             metadata_weight = weight * 0.01
-            # Resize data pool weight to accomodate metadata weight
+            # Resize data pool weight to accommodate metadata weight
             weight = weight - metadata_weight
             # Create erasure profile
             self.interface.create_erasure_profile(
@@ -662,7 +675,9 @@ class CephClientHandler(RelationHandler):
             )
         else:
             self.interface.create_replicated_pool(
-                name=data_pool_name, replicas=replicas, weight=weight,
+                name=data_pool_name,
+                replicas=replicas,
+                weight=weight,
                 app_name=self.app_name,
             )
 
@@ -674,18 +689,16 @@ class CephClientHandler(RelationHandler):
     @property
     def key(self) -> str:
         """Retrieve the cephx key provided for the application."""
-        return self.interface.get_relation_data().get('key')
+        return self.interface.get_relation_data().get("key")
 
     def context(self) -> dict:
         """Context containing Ceph connection data."""
         ctxt = super().context()
         data = self.interface.get_relation_data()
-        ctxt['mon_hosts'] = ",".join(
-            sorted(data.get("mon_hosts"))
-        )
-        ctxt['auth'] = data.get('auth')
-        ctxt['key'] = data.get("key")
-        ctxt['rbd_features'] = None
+        ctxt["mon_hosts"] = ",".join(sorted(data.get("mon_hosts")))
+        ctxt["auth"] = data.get("auth")
+        ctxt["key"] = data.get("key")
+        ctxt["rbd_features"] = None
         return ctxt
 
 
@@ -704,6 +717,7 @@ class CertificatesHandler(RelationHandler):
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
         import interface_tls_certificates.ca_client as ca_client
+
         self.ca_client = ca_client
         self.sans = sans
         super().__init__(charm, relation_name, callback_f, mandatory)
@@ -715,20 +729,18 @@ class CertificatesHandler(RelationHandler):
             self.charm,
             self.relation_name,
         )
+        self.framework.observe(certs.on.ca_available, self._request_certs)
         self.framework.observe(
-            certs.on.ca_available,
-            self._request_certs)
-        self.framework.observe(
-            certs.on.tls_server_config_ready,
-            self._certs_ready)
+            certs.on.tls_server_config_ready, self._certs_ready
+        )
         return certs
 
     def _request_certs(self, event: ops.framework.EventBase) -> None:
         """Request Certificates."""
         logger.debug(f"Requesting cert for {self.sans}")
         self.interface.request_server_certificate(
-            self.model.unit.name.replace('/', '-'),
-            self.sans)
+            self.model.unit.name.replace("/", "-"), self.sans
+        )
         self.callback_f(event)
 
     def _certs_ready(self, event: ops.framework.EventBase) -> None:
@@ -745,9 +757,11 @@ class CertificatesHandler(RelationHandler):
         key = self.interface.server_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption())
+            encryption_algorithm=serialization.NoEncryption(),
+        )
         cert = self.interface.server_certificate.public_bytes(
-            encoding=serialization.Encoding.PEM)
+            encoding=serialization.Encoding.PEM
+        )
         try:
             root_ca_chain = self.interface.root_ca_chain.public_bytes(
                 encoding=serialization.Encoding.PEM
@@ -762,12 +776,15 @@ class CertificatesHandler(RelationHandler):
             root_ca_chain = bytes()
         ca_cert = (
             self.interface.ca_certificate.public_bytes(
-                encoding=serialization.Encoding.PEM) +
-            root_ca_chain)
+                encoding=serialization.Encoding.PEM
+            )
+            + root_ca_chain
+        )
         ctxt = {
-            'key': key.decode(),
-            'cert': cert.decode(),
-            'ca_cert': ca_cert.decode()}
+            "key": key.decode(),
+            "cert": cert.decode(),
+            "ca_cert": ca_cert.decode(),
+        }
         return ctxt
 
 
@@ -798,15 +815,15 @@ class CloudCredentialsRequiresHandler(RelationHandler):
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for cloud-credentials relation."""
-        import charms.keystone_k8s.v0.cloud_credentials as \
-            cloud_credentials
-        logger.debug('Setting up the cloud-credentials event handler')
+        import charms.keystone_k8s.v0.cloud_credentials as cloud_credentials
+
+        logger.debug("Setting up the cloud-credentials event handler")
         credentials_service = cloud_credentials.CloudCredentialsRequires(
-            self.charm, self.relation_name,
+            self.charm,
+            self.relation_name,
         )
         self.framework.observe(
-            credentials_service.on.ready,
-            self._credentials_ready
+            credentials_service.on.ready, self._credentials_ready
         )
         return credentials_service
 

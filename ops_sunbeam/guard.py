@@ -1,4 +1,4 @@
-# Copyright 2021, Canonical Ltd.
+# Copyright 2021 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,21 +15,27 @@
 """Module to handle errors and bailing out of an event/hook."""
 
 import logging
-from contextlib import contextmanager
+from contextlib import (
+    contextmanager,
+)
 
-from ops.charm import CharmBase
-from ops.model import BlockedStatus
+from ops.charm import (
+    CharmBase,
+)
+from ops.model import (
+    BlockedStatus,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class GuardException(Exception):
+class GuardExceptionError(Exception):
     """GuardException."""
 
     pass
 
 
-class BlockedException(Exception):
+class BlockedExceptionError(Exception):
     """Charm is blocked."""
 
     pass
@@ -41,7 +47,7 @@ def guard(
     section: str,
     handle_exception: bool = True,
     log_traceback: bool = True,
-    **__
+    **__,
 ) -> None:
     """Context manager to handle errors and bailing out of an event/hook.
 
@@ -62,13 +68,13 @@ def guard(
     try:
         yield
         logging.info("Completed guarded section fully: '%s'", section)
-    except GuardException as e:
+    except GuardExceptionError as e:
         logger.info(
             "Guarded Section: Early exit from '%s' due to '%s'.",
             section,
             str(e),
         )
-    except BlockedException as e:
+    except BlockedExceptionError as e:
         logger.warning(
             "Charm is blocked in section '%s' due to '%s'", section, str(e)
         )
@@ -77,14 +83,16 @@ def guard(
         # something else went wrong
         if handle_exception:
             logging.error(
-                "Exception raised in secion '%s': %s", section, str(e)
+                "Exception raised in section '%s': %s", section, str(e)
             )
             if log_traceback:
                 import traceback
 
                 logging.error(traceback.format_exc())
-                charm.status.set(BlockedStatus(
-                    "Error in charm (see logs): {}".format(str(e))
-                ))
+                charm.status.set(
+                    BlockedStatus(
+                        "Error in charm (see logs): {}".format(str(e))
+                    )
+                )
             return
         raise

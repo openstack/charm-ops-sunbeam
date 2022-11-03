@@ -1,4 +1,4 @@
-# Copyright 2021, Canonical Ltd.
+# Copyright 2021 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,8 +16,13 @@
 
 import logging
 import os
-from pathlib import Path
-from typing import List, TYPE_CHECKING
+from pathlib import (
+    Path,
+)
+from typing import (
+    TYPE_CHECKING,
+    List,
+)
 
 import ops.pebble
 
@@ -25,15 +30,17 @@ if TYPE_CHECKING:
     import ops_sunbeam.core as sunbeam_core
     import ops.model
 
-from charmhelpers.contrib.openstack.templating import get_loader
 import jinja2
+from charmhelpers.contrib.openstack.templating import (
+    get_loader,
+)
 
 log = logging.getLogger(__name__)
 
 
 def get_container(
-    containers: List['ops.model.Container'], name: str
-) -> 'ops.model.Container':
+    containers: List["ops.model.Container"], name: str
+) -> "ops.model.Container":
     """Search for container with given name inlist of containers."""
     container = None
     for c in containers:
@@ -43,11 +50,11 @@ def get_container(
 
 
 def sidecar_config_render(
-    container: 'ops.model.Container',
-    config: 'sunbeam_core.ContainerConfigFile',
+    container: "ops.model.Container",
+    config: "sunbeam_core.ContainerConfigFile",
     template_dir: str,
     openstack_release: str,
-    context: 'sunbeam_core.OPSCharmContexts',
+    context: "sunbeam_core.OPSCharmContexts",
 ) -> bool:
     """Render templates inside containers.
 
@@ -56,7 +63,7 @@ def sidecar_config_render(
     """
     file_updated = False
     try:
-        original_contents = (container.pull(config.path).read())
+        original_contents = container.pull(config.path).read()
     except (ops.pebble.PathError, FileNotFoundError):
         original_contents = None
     loader = get_loader(template_dir, openstack_release)
@@ -66,9 +73,7 @@ def sidecar_config_render(
             os.path.basename(config.path) + ".j2"
         )
     except jinja2.exceptions.TemplateNotFound:
-        template = _tmpl_env.get_template(
-            os.path.basename(config.path)
-        )
+        template = _tmpl_env.get_template(os.path.basename(config.path))
     contents = template.render(context)
     if original_contents == contents:
         log.debug(
@@ -78,7 +83,8 @@ def sidecar_config_render(
         kwargs = {
             "user": config.user,
             "group": config.group,
-            "permissions": config.permissions}
+            "permissions": config.permissions,
+        }
         parent_dir = str(Path(config.path).parent)
         if not container.isdir(parent_dir):
             container.make_dir(parent_dir, make_parents=True)

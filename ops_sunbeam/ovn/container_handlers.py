@@ -14,10 +14,12 @@
 
 """Base classes for defining OVN Pebble handlers."""
 
+from typing import (
+    List,
+)
+
 from .. import container_handlers as sunbeam_chandlers
 from .. import core as sunbeam_core
-
-from typing import List
 
 
 class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
@@ -47,7 +49,7 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
 
     @property
     def service_description(self) -> str:
-        """Return a short decription of service e.g. OVN Southbound DB."""
+        """Return a short description of service e.g. OVN Southbound DB."""
         raise NotImplementedError
 
     def get_layer(self) -> dict:
@@ -58,8 +60,9 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
         """
         return {
             "summary": f"{self.service_description} service",
-            "description": ("Pebble config layer for "
-                            f"{self.service_description}"),
+            "description": (
+                "Pebble config layer for " f"{self.service_description}"
+            ),
             "services": {
                 self.service_name: {
                     "override": "replace",
@@ -81,9 +84,7 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
                 "online": {
                     "override": "replace",
                     "level": "ready",
-                    "exec": {
-                        "command": f"{self.status_command}"
-                    }
+                    "exec": {"command": f"{self.status_command}"},
                 },
             }
         }
@@ -92,41 +93,27 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
     def directories(self) -> List[sunbeam_chandlers.ContainerDir]:
         """Directories to creete in container."""
         return [
-            sunbeam_chandlers.ContainerDir(
-                '/etc/ovn',
-                'root',
-                'root'),
-            sunbeam_chandlers.ContainerDir(
-                '/run/ovn',
-                'root',
-                'root'),
-            sunbeam_chandlers.ContainerDir(
-                '/var/lib/ovn',
-                'root',
-                'root'),
-            sunbeam_chandlers.ContainerDir(
-                '/var/log/ovn',
-                'root',
-                'root')]
+            sunbeam_chandlers.ContainerDir("/etc/ovn", "root", "root"),
+            sunbeam_chandlers.ContainerDir("/run/ovn", "root", "root"),
+            sunbeam_chandlers.ContainerDir("/var/lib/ovn", "root", "root"),
+            sunbeam_chandlers.ContainerDir("/var/log/ovn", "root", "root"),
+        ]
 
     def default_container_configs(
-        self
+        self,
     ) -> List[sunbeam_core.ContainerConfigFile]:
         """Files to render into containers."""
         return [
             sunbeam_core.ContainerConfigFile(
-                self.wrapper_script,
-                'root',
-                'root'),
+                self.wrapper_script, "root", "root"
+            ),
             sunbeam_core.ContainerConfigFile(
-                '/etc/ovn/key_host',
-                'root',
-                'root'),
+                "/etc/ovn/key_host", "root", "root"
+            ),
             sunbeam_core.ContainerConfigFile(
-                '/etc/ovn/cert_host',
-                'root',
-                'root'),
+                "/etc/ovn/cert_host", "root", "root"
+            ),
             sunbeam_core.ContainerConfigFile(
-                '/etc/ovn/ovn-central.crt',
-                'root',
-                'root')]
+                "/etc/ovn/ovn-central.crt", "root", "root"
+            ),
+        ]

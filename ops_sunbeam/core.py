@@ -15,17 +15,29 @@
 """Collection of core components."""
 
 import collections
-from typing import Generator, List, TYPE_CHECKING, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Generator,
+    List,
+    Tuple,
+    Union,
+)
 
 if TYPE_CHECKING:
-    from ops_sunbeam.charm import OSBaseOperatorCharm
-    from ops_sunbeam.config_contexts import ConfigContext
-    from ops_sunbeam.relation_handlers import RelationHandler
+    from ops_sunbeam.charm import (
+        OSBaseOperatorCharm,
+    )
+    from ops_sunbeam.config_contexts import (
+        ConfigContext,
+    )
+    from ops_sunbeam.relation_handlers import (
+        RelationHandler,
+    )
 
 ContainerConfigFile = collections.namedtuple(
     "ContainerConfigFile",
     ["path", "user", "group", "permissions"],
-    defaults=(None,)
+    defaults=(None,),
 )
 
 
@@ -61,7 +73,7 @@ class OPSCharmContexts:
     def add_config_context(
         self, config_adapter: "ConfigContext", namespace: str
     ) -> None:
-        """Add add config adapater to context."""
+        """Add add config adapter to context."""
         self.namespaces.append(namespace)
         setattr(self, namespace, config_adapter)
 

@@ -16,33 +16,40 @@
 
 """Module containing shared code to be used in a charms units tests."""
 
+import collections
 import inspect
 import json
-import ops
 import os
 import pathlib
 import sys
 import typing
 import unittest
-import collections
-from typing import List
+from typing import (
+    List,
+)
 
-from mock import MagicMock, Mock, patch
+import ops
+from mock import (
+    MagicMock,
+    Mock,
+    patch,
+)
 
 sys.path.append("lib")  # noqa
 sys.path.append("src")  # noqa
 
-from ops import framework, model
-
+from ops import (
+    framework,
+    model,
+)
 from ops.testing import (
+    SIMULATE_CAN_CONNECT,
     Harness,
     _TestingModelBackend,
     _TestingPebbleClient,
-    SIMULATE_CAN_CONNECT,
 )
 
-
-TEST_CA = '''-----BEGIN CERTIFICATE-----
+TEST_CA = """-----BEGIN CERTIFICATE-----
 MIIDADCCAeigAwIBAgIUOTGfdiGSlKoiyWskxH1za0Nh7cYwDQYJKoZIhvcNAQEL
 BQAwGjEYMBYGA1UEAwwPRGl2aW5lQXV0aG9yaXR5MB4XDTIyMDIwNjE4MjYyM1oX
 DTMzMDEyMDE4MjYyM1owRTFDMEEGA1UEAxM6VmF1bHQgSW50ZXJtZWRpYXRlIENl
@@ -60,9 +67,9 @@ zT8PgdjdzBW80l7KAMy4/GzZvvK7MWfkkhwwnY7oXs9F3q28gFIdcYyc9A1SDg/8
 8jWI6RP5yBcNS/PgUmVV+Ko1uTHxNsKjOn7QPuUgjMBeW0fpBCHVFxz7rs+orHNF
 JSWcYpOxivTh+YO8cAxAGlKzrgZDcXQDjGfF34U/v3niDUHO+CAk6Jz3io4Oxh2X
 GksTPQ==
------END CERTIFICATE-----'''
+-----END CERTIFICATE-----"""
 
-TEST_CHAIN = '''-----BEGIN CERTIFICATE-----
+TEST_CHAIN = """-----BEGIN CERTIFICATE-----
 MIIDADCCAeigAwIBAgIUOTGfdiGSlKoiyWskxH1za0Nh7cYwDQYJKoZIhvcNAQEL
 BQAwGjEYMBYGA1UEAwwPRGl2aW5lQXV0aG9yaXR5MB4XDTIyMDIwNjE4MjYyM1oX
 DTMzMDEyMDE4MjYyM1owRTFDMEEGA1UEAxM6VmF1bHQgSW50ZXJtZWRpYXRlIENl
@@ -80,9 +87,9 @@ zT8PgdjdzBW80l7KAMy4/GzZvvK7MWfkkhwwnY7oXs9F3q28gFIdcYyc9A1SDg/8
 8jWI6RP5yBcNS/PgUmVV+Ko1uTHxNsKjOn7QPuUgjMBeW0fpBCHVFxz7rs+orHNF
 JSWcYpOxivTh+YO8cAxAGlKzrgZDcXQDjGfF34U/v3niDUHO+CAk6Jz3io4Oxh2X
 GksTPQ==
------END CERTIFICATE-----'''
+-----END CERTIFICATE-----"""
 
-TEST_SERVER_CERT = '''-----BEGIN CERTIFICATE-----
+TEST_SERVER_CERT = """-----BEGIN CERTIFICATE-----
 MIIEEzCCAvugAwIBAgIUIRVQ0iFgTDBP+Ju6AlcnxTHywUgwDQYJKoZIhvcNAQEL
 BQAwRTFDMEEGA1UEAxM6VmF1bHQgSW50ZXJtZWRpYXRlIENlcnRpZmljYXRlIEF1
 dGhvcml0eSAoY2hhcm0tcGtpLWxvY2FsKTAeFw0yMjAyMDcxODI1NTlaFw0yMzAy
@@ -105,9 +112,9 @@ wzSbqkarasPFVpPJnFAGqry6y5B3lZ3OrhHJOIwMSOMQfPt2dSsz+HqfrMwxqAek
 smciCVWqVwN+uq0yqeH5QuACHlkJSV4o/5SkDcFZFaFHuTRqd6hMpczZIw+o+NRn
 OO1YV69oqCCfUE01zlwTF7thZA19xacGS9f8GJO9Ij15MiysZLjxoTfoof/wDdNd
 A0Rs/pW3ja1UfTItPdjC4BgWtQh1a7O9NznrW2L6nRCASI0F1FvQ
------END CERTIFICATE-----'''
+-----END CERTIFICATE-----"""
 
-TEST_SERVER_KEY = '''-----BEGIN RSA PRIVATE KEY-----
+TEST_SERVER_KEY = """-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA4VYeKjC3o9GZAnbuVBudyd/a5sHnaGZlMJz8zevhGr5nARRR
 194bgR8VSB9k1fRbF1Y9WTygBW5aiXPy+KbmaD5DsDpJNkF/2zOQDLG9nKmLbamr
 AcHFU8l8kAVwkdhYgu3T8QbLksozYPiYavg9KfA51wVxTRuUyLpvSLJkc1q0xwuJ
@@ -133,7 +140,7 @@ C8l5gTQQnHu3h5Z7HX97GWgn1ql4X1MUr+aP6Mq9CgqzCn8s/CAZeEhOIXVgwFPq
 a03odwKBgG454yINXnHPBo9jjcEKwBTaMLH0n25HMJmWaJUnGVmPzrhxHp5xMKZz
 ULTaKTN2gp7E2BuxENtAyplrvLiXXYH3CqT528JgMdMm0al6X3MXo9WqbOg/KNpa
 4JSyyuZ42yGmYlhMCimlk3kVnDxb8PJLWOFnx6f9/i0RWUqnY0nU
------END RSA PRIVATE KEY-----'''
+-----END RSA PRIVATE KEY-----"""
 
 
 class ContainerCalls:
@@ -158,17 +165,27 @@ class ContainerCalls:
 
     def started_services(self, container_name: str) -> List:
         """Distinct unordered list of services that were started."""
-        return list(set([
-            svc
-            for svc_list in self.start[container_name]
-            for svc in svc_list]))
+        return list(
+            set(
+                [
+                    svc
+                    for svc_list in self.start[container_name]
+                    for svc in svc_list
+                ]
+            )
+        )
 
     def stopped_services(self, container_name: str) -> List:
         """Distinct unordered list of services that were started."""
-        return list(set([
-            svc
-            for svc_list in self.stop[container_name]
-            for svc in svc_list]))
+        return list(
+            set(
+                [
+                    svc
+                    for svc_list in self.stop[container_name]
+                    for svc in svc_list
+                ]
+            )
+        )
 
     def add_push(self, container_name: str, call: typing.Dict) -> None:
         """Log a push call."""
@@ -188,18 +205,17 @@ class ContainerCalls:
 
     def updated_files(self, container_name: str) -> typing.List:
         """Return a list of files that have been updated in a container."""
-        return [c['path'] for c in self.push.get(container_name, [])]
+        return [c["path"] for c in self.push.get(container_name, [])]
 
     def file_update_calls(
-        self,
-        container_name: str,
-        file_name: str
+        self, container_name: str, file_name: str
     ) -> typing.List:
         """Return the update call for File_name in container_name."""
         return [
             c
             for c in self.push.get(container_name, [])
-            if c['path'] == file_name]
+            if c["path"] == file_name
+        ]
 
 
 class CharmTestCase(unittest.TestCase):
@@ -207,21 +223,21 @@ class CharmTestCase(unittest.TestCase):
 
     container_calls = ContainerCalls()
 
-    def setUp(self, obj: 'typing.ANY', patches: 'typing.List') -> None:
+    def setUp(self, obj: "typing.ANY", patches: "typing.List") -> None:
         """Run constructor."""
         super().setUp()
         self.patches = patches
         self.obj = obj
         self.patch_all()
 
-    def patch(self, method: 'typing.ANY') -> Mock:
+    def patch(self, method: "typing.ANY") -> Mock:
         """Patch the named method on self.obj."""
         _m = patch.object(self.obj, method)
         mock = _m.start()
         self.addCleanup(_m.stop)
         return mock
 
-    def patch_obj(self, obj: 'typing.ANY', method: 'typing.ANY') -> Mock:
+    def patch_obj(self, obj: "typing.ANY", method: "typing.ANY") -> Mock:
         """Patch the named method on obj."""
         _m = patch.object(obj, method)
         mock = _m.start()
@@ -233,10 +249,15 @@ class CharmTestCase(unittest.TestCase):
         for method in self.patches:
             setattr(self, method, self.patch(method))
 
-    def check_file(self, container: str, path: str,
-                   contents: typing.List = None,
-                   user: str = None, group: str = None,
-                   permissions: str = None) -> None:
+    def check_file(
+        self,
+        container: str,
+        path: str,
+        contents: typing.List = None,
+        user: str = None,
+        group: str = None,
+        permissions: str = None,
+    ) -> None:
         """Check the attributes of a file."""
         client = self.harness.charm.unit.get_container(container)._pebble
         files = client.list_files(path, itself=True)
@@ -248,21 +269,18 @@ class CharmTestCase(unittest.TestCase):
                 received_data = infile.read()
             self.assertEqual(contents, received_data)
         if user:
-            self.assertEqual(
-                test_file.user, user)
+            self.assertEqual(test_file.user, user)
         if group:
-            self.assertEqual(
-                test_file.group, group)
+            self.assertEqual(test_file.group, group)
         if permissions:
-            self.assertEqual(
-                test_file.permissions, permissions)
+            self.assertEqual(test_file.permissions, permissions)
 
 
 def add_ingress_relation(harness: Harness, endpoint_type: str) -> str:
     """Add ingress relation."""
-    app_name = 'traefik-' + endpoint_type
-    unit_name = app_name + '/0'
-    rel_name = 'ingress-' + endpoint_type
+    app_name = "traefik-" + endpoint_type
+    unit_name = app_name + "/0"
+    rel_name = "ingress-" + endpoint_type
     rel_id = harness.add_relation(rel_name, app_name)
     harness.add_relation_unit(rel_id, unit_name)
     return rel_id
@@ -272,24 +290,20 @@ def add_ingress_relation_data(
     harness: Harness, rel_id: str, endpoint_type: str
 ) -> None:
     """Add ingress data to ingress relation."""
-    app_name = 'traefik-' + endpoint_type
-    url = 'http://' + endpoint_type + "-url"
+    app_name = "traefik-" + endpoint_type
+    url = "http://" + endpoint_type + "-url"
 
     ingress_data = {"url": url}
     harness.update_relation_data(
-        rel_id,
-        app_name,
-        {"ingress": json.dumps(ingress_data)})
+        rel_id, app_name, {"ingress": json.dumps(ingress_data)}
+    )
 
 
 def add_complete_ingress_relation(harness: Harness) -> None:
     """Add complete Ingress relation."""
-    for endpoint_type in ['internal', 'public']:
+    for endpoint_type in ["internal", "public"]:
         rel_id = add_ingress_relation(harness, endpoint_type)
-        add_ingress_relation_data(
-            harness,
-            rel_id,
-            endpoint_type)
+        add_ingress_relation_data(harness, rel_id, endpoint_type)
 
 
 def add_base_amqp_relation(harness: Harness) -> str:
@@ -303,9 +317,7 @@ def add_base_amqp_relation(harness: Harness) -> str:
     return rel_id
 
 
-def add_amqp_relation_credentials(
-    harness: Harness, rel_id: str
-) -> None:
+def add_amqp_relation_credentials(harness: Harness, rel_id: str) -> None:
     """Add amqp data to amqp relation."""
     harness.update_relation_data(
         rel_id,
@@ -390,7 +402,7 @@ def add_cloud_credentials_relation_response(
             "user-domain-id": "udomain-id",
             "project-domain-name": "pdomain_-ame",
             "project-domain-id": "pdomain-id",
-            "region": "region12"
+            "region": "region12",
         },
     )
 
@@ -406,9 +418,7 @@ def add_base_db_relation(harness: Harness) -> str:
     return rel_id
 
 
-def add_db_relation_credentials(
-    harness: Harness, rel_id: str
-) -> None:
+def add_db_relation_credentials(harness: Harness, rel_id: str) -> None:
     """Add db credentials data to db relation."""
     harness.update_relation_data(
         rel_id,
@@ -433,64 +443,59 @@ def add_api_relations(harness: Harness) -> None:
 def add_complete_db_relation(harness: Harness) -> None:
     """Add complete DB relation."""
     rel_id = add_base_db_relation(harness)
-    add_db_relation_credentials(
-        harness,
-        rel_id)
+    add_db_relation_credentials(harness, rel_id)
     return rel_id
 
 
 def add_complete_identity_relation(harness: Harness) -> None:
     """Add complete Identity relation."""
     rel_id = add_base_identity_service_relation(harness)
-    add_identity_service_relation_response(
-        harness,
-        rel_id)
+    add_identity_service_relation_response(harness, rel_id)
     return rel_id
 
 
 def add_complete_cloud_credentials_relation(harness: Harness) -> None:
     """Add complete cloud-credentials relation."""
     rel_id = add_base_cloud_credentials_relation(harness)
-    add_cloud_credentials_relation_response(
-        harness,
-        rel_id)
+    add_cloud_credentials_relation_response(harness, rel_id)
     return rel_id
 
 
 def add_complete_amqp_relation(harness: Harness) -> None:
     """Add complete AMQP relation."""
     rel_id = add_base_amqp_relation(harness)
-    add_amqp_relation_credentials(
-        harness,
-        rel_id)
+    add_amqp_relation_credentials(harness, rel_id)
     return rel_id
 
 
-def add_ceph_relation_credentials(
-    harness: Harness, rel_id: str
-) -> None:
+def add_ceph_relation_credentials(harness: Harness, rel_id: str) -> None:
     """Add amqp data to amqp relation."""
     # During tests the charm class is never destroyed and recreated as it
     # would be between hook executions. This means request is never marked
     # as complete as it never matches the previous request and always looks
     # like it needs resending.
-    harness.charm.ceph.interface.previous_requests = \
+    harness.charm.ceph.interface.previous_requests = (
         harness.charm.ceph.interface.get_previous_requests_from_relations()
+    )
     request = json.loads(
         harness.get_relation_data(rel_id, harness.charm.unit.name)[
-            'broker_req'])
-    client_unit = harness.charm.unit.name.replace('/', '-')
+            "broker_req"
+        ]
+    )
+    client_unit = harness.charm.unit.name.replace("/", "-")
     harness.update_relation_data(
         rel_id,
         "ceph-mon/0",
         {
-            'auth': 'cephx',
-            'key': 'AQBUfpVeNl7CHxAA8/f6WTcYFxW2dJ5VyvWmJg==',
-            'ingress-address': '192.0.2.2',
-            'ceph-public-address': '192.0.2.2',
-            f'broker-rsp-{client_unit}': json.dumps({
-                'exit-code': 0,
-                'request-id': request['request-id']})})
+            "auth": "cephx",
+            "key": "AQBUfpVeNl7CHxAA8/f6WTcYFxW2dJ5VyvWmJg==",
+            "ingress-address": "192.0.2.2",
+            "ceph-public-address": "192.0.2.2",
+            f"broker-rsp-{client_unit}": json.dumps(
+                {"exit-code": 0, "request-id": request["request-id"]}
+            ),
+        },
+    )
     harness.add_relation_unit(rel_id, "ceph-mon/1")
 
 
@@ -507,25 +512,23 @@ def add_base_ceph_relation(harness: Harness) -> str:
 def add_complete_ceph_relation(harness: Harness) -> None:
     """Add complete ceph relation."""
     rel_id = add_base_ceph_relation(harness)
-    add_ceph_relation_credentials(
-        harness,
-        rel_id)
+    add_ceph_relation_credentials(harness, rel_id)
     return rel_id
 
 
-def add_certificates_relation_certs(
-    harness: Harness, rel_id: str
-) -> None:
+def add_certificates_relation_certs(harness: Harness, rel_id: str) -> None:
     """Add cert data to certificates relation."""
-    client_unit = harness.charm.unit.name.replace('/', '_')
+    client_unit = harness.charm.unit.name.replace("/", "_")
     harness.update_relation_data(
         rel_id,
-        'vault/0',
+        "vault/0",
         {
-            f'{client_unit}.server.cert': TEST_SERVER_CERT,
-            f'{client_unit}.server.key': TEST_SERVER_KEY,
-            'chain': TEST_CHAIN,
-            'ca': TEST_CA})
+            f"{client_unit}.server.cert": TEST_SERVER_CERT,
+            f"{client_unit}.server.key": TEST_SERVER_KEY,
+            "chain": TEST_CHAIN,
+            "ca": TEST_CA,
+        },
+    )
 
 
 def add_base_certificates_relation(harness: Harness) -> str:
@@ -541,17 +544,13 @@ def add_base_certificates_relation(harness: Harness) -> str:
 def add_complete_certificates_relation(harness: Harness) -> None:
     """Add complete certificates relation."""
     rel_id = add_base_certificates_relation(harness)
-    add_certificates_relation_certs(
-        harness,
-        rel_id)
+    add_certificates_relation_certs(harness, rel_id)
     return rel_id
 
 
 def add_complete_peer_relation(harness: Harness) -> None:
     """Add complete peer relation."""
-    rel_id = harness.add_relation(
-        'peers',
-        harness.charm.app.name)
+    rel_id = harness.add_relation("peers", harness.charm.app.name)
     new_unit = f"{harness.charm.app.name}/1"
     harness.add_relation_unit(rel_id, new_unit)
     harness.update_relation_data(
@@ -561,13 +560,14 @@ def add_complete_peer_relation(harness: Harness) -> None:
 
 
 test_relations = {
-    'database': add_complete_db_relation,
-    'amqp': add_complete_amqp_relation,
-    'identity-service': add_complete_identity_relation,
-    'cloud-credentials': add_complete_cloud_credentials_relation,
-    'peers': add_complete_peer_relation,
-    'certificates': add_complete_certificates_relation,
-    'ceph': add_complete_ceph_relation}
+    "database": add_complete_db_relation,
+    "amqp": add_complete_amqp_relation,
+    "identity-service": add_complete_identity_relation,
+    "cloud-credentials": add_complete_cloud_credentials_relation,
+    "peers": add_complete_peer_relation,
+    "certificates": add_complete_certificates_relation,
+    "ceph": add_complete_ceph_relation,
+}
 
 
 def add_all_relations(harness: Harness) -> None:
@@ -606,7 +606,6 @@ def get_harness(
     """Return a testing harness."""
 
     class _OSTestingPebbleClient(_TestingPebbleClient):
-
         def exec(
             self,
             command: typing.List[str],
@@ -619,34 +618,35 @@ def get_harness(
             group_id: int = None,
             group: str = None,
             stdin: typing.Union[
-                str, bytes, typing.TextIO, typing.BinaryIO] = None,
+                str, bytes, typing.TextIO, typing.BinaryIO
+            ] = None,
             stdout: typing.Union[typing.TextIO, typing.BinaryIO] = None,
             stderr: typing.Union[typing.TextIO, typing.BinaryIO] = None,
-            encoding: str = 'utf-8',
-            combine_stderr: bool = False
+            encoding: str = "utf-8",
+            combine_stderr: bool = False,
         ) -> None:
-            container_calls.add_execute(
-                self.container_name,
-                command)
+            container_calls.add_execute(self.container_name, command)
             process_mock = MagicMock()
-            process_mock.wait_output.return_value = ('', None)
+            process_mock.wait_output.return_value = ("", None)
             return process_mock
 
         def start_services(
-                self, services: List[str], timeout: float = 30.0,
-                delay: float = 0.1,) -> None:
+            self,
+            services: List[str],
+            timeout: float = 30.0,
+            delay: float = 0.1,
+        ) -> None:
             """Record start service events."""
-            container_calls.add_start(
-                self.container_name,
-                services)
+            container_calls.add_start(self.container_name, services)
 
         def stop_services(
-                self, services: List[str], timeout: float = 30.0,
-                delay: float = 0.1,) -> None:
+            self,
+            services: List[str],
+            timeout: float = 30.0,
+            delay: float = 0.1,
+        ) -> None:
             """Record stop service events."""
-            container_calls.add_stop(
-                self.container_name,
-                services)
+            container_calls.add_stop(self.container_name, services)
 
     class _OSTestingModelBackend(_TestingModelBackend):
         def get_pebble(self, socket_path: str) -> _OSTestingPebbleClient:
@@ -656,7 +656,7 @@ def get_harness(
                 client = _OSTestingPebbleClient(self)
                 # Extract container name from:
                 # /charm/containers/placement-api/pebble.socket
-                client.container_name = socket_path.split('/')[3]
+                client.container_name = socket_path.split("/")[3]
                 self._pebble_clients[socket_path] = client
             self._pebble_clients_can_connect[client] = not SIMULATE_CAN_CONNECT
             return client
@@ -692,11 +692,7 @@ def get_harness(
             with open(metadata_file) as f:
                 charm_metadata = f.read()
 
-    harness = Harness(
-        charm_class,
-        meta=charm_metadata,
-        config=charm_config
-    )
+    harness = Harness(charm_class, meta=charm_metadata, config=charm_config)
     harness._backend = _OSTestingModelBackend(
         harness._unit_name, harness._meta, harness._get_config(charm_config)
     )

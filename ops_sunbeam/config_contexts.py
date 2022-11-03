@@ -19,9 +19,14 @@ create reusable contexts which translate charm config, deployment state etc.
 These are not specific to a relation.
 """
 
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
+
 import logging
-from typing import TYPE_CHECKING
+from typing import (
+    TYPE_CHECKING,
+)
 
 if TYPE_CHECKING:
     import ops_sunbeam.charm
@@ -30,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # XXX Dulpicating definition in relation handlers
 ERASURE_CODED = "erasure-coded"
-REPLICATED = "replacated"
+REPLICATED = "replicated"
 
 
 class ConfigContext:
@@ -71,7 +76,7 @@ class WSGIWorkerConfigContext(ConfigContext):
 
     def context(self) -> dict:
         """WSGI configuration options."""
-        log_svc_name = self.charm.service_name.replace('-', '_')
+        log_svc_name = self.charm.service_name.replace("-", "_")
         return {
             "name": self.charm.service_name,
             "public_port": self.charm.default_public_ingress_port,
@@ -105,21 +110,20 @@ class CinderCephConfigurationContext(ConfigContext):
     def context(self) -> None:
         """Cinder Ceph configuration context."""
         config = self.charm.model.config.get
-        data_pool_name = config('rbd-pool-name') or self.charm.app.name
-        if config('pool-type') == ERASURE_CODED:
+        data_pool_name = config("rbd-pool-name") or self.charm.app.name
+        if config("pool-type") == ERASURE_CODED:
             pool_name = (
-                config('ec-rbd-metadata-pool') or
-                f"{data_pool_name}-metadata"
+                config("ec-rbd-metadata-pool") or f"{data_pool_name}-metadata"
             )
         else:
             pool_name = data_pool_name
-        backend_name = config('volume-backend-name') or self.charm.app.name
+        backend_name = config("volume-backend-name") or self.charm.app.name
         # TODO:
         # secret_uuid needs to be generated and shared for the app
         return {
-            'cluster_name': self.charm.app.name,
-            'rbd_pool': pool_name,
-            'rbd_user': self.charm.app.name,
-            'backend_name': backend_name,
-            'backend_availability_zone': config('backend-availability-zone'),
+            "cluster_name": self.charm.app.name,
+            "rbd_pool": pool_name,
+            "rbd_user": self.charm.app.name,
+            "backend_name": backend_name,
+            "backend_availability_zone": config("backend-availability-zone"),
         }

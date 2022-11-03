@@ -14,25 +14,27 @@
 
 """Test ops_sunbeam.templating."""
 
-import mock
 import sys
+from io import (
+    BytesIO,
+    TextIOWrapper,
+)
+
 import jinja2
-from io import TextIOWrapper, BytesIO
+import mock
 
-sys.path.append('lib')  # noqa
-sys.path.append('src')  # noqa
+sys.path.append("lib")  # noqa
+sys.path.append("src")  # noqa
 
-import ops_sunbeam.test_utils as test_utils
-import ops_sunbeam.templating as sunbeam_templating
 import ops_sunbeam.core as sunbeam_core
+import ops_sunbeam.templating as sunbeam_templating
+import ops_sunbeam.test_utils as test_utils
 
 
 class TestTemplating(test_utils.CharmTestCase):
     """Tests for ops_sunbeam.templating.."""
 
-    PATCHES = [
-        'get_loader'
-    ]
+    PATCHES = ["get_loader"]
 
     def setUp(self) -> None:
         """Charm test class setup."""
@@ -42,41 +44,35 @@ class TestTemplating(test_utils.CharmTestCase):
         """Check rendering templates."""
         container_mock = mock.MagicMock()
         config = sunbeam_core.ContainerConfigFile(
-            "/tmp/testfile.txt",
-            "myuser",
-            "mygrp"
+            "/tmp/testfile.txt", "myuser", "mygrp"
         )
-        self.get_loader.return_value = jinja2.DictLoader({
-            'testfile.txt': 'debug = {{ debug }}'})
+        self.get_loader.return_value = jinja2.DictLoader(
+            {"testfile.txt": "debug = {{ debug }}"}
+        )
         sunbeam_templating.sidecar_config_render(
-            container_mock,
-            config,
-            "/tmp/templates",
-            "essex",
-            {'debug': True})
+            container_mock, config, "/tmp/templates", "essex", {"debug": True}
+        )
         container_mock.push.assert_called_once_with(
-            '/tmp/testfile.txt',
-            'debug = True',
-            user='myuser',
-            group='mygrp',
-            permissions=None)
+            "/tmp/testfile.txt",
+            "debug = True",
+            user="myuser",
+            group="mygrp",
+            permissions=None,
+        )
 
     def test_render_no_change(self) -> None:
         """Check rendering template with no content change."""
         container_mock = mock.MagicMock()
         container_mock.pull.return_value = TextIOWrapper(
-            BytesIO(b'debug = True'))
-        config = sunbeam_core.ContainerConfigFile(
-            "/tmp/testfile.txt",
-            "myuser",
-            "mygrp"
+            BytesIO(b"debug = True")
         )
-        self.get_loader.return_value = jinja2.DictLoader({
-            'testfile.txt': 'debug = {{ debug }}'})
+        config = sunbeam_core.ContainerConfigFile(
+            "/tmp/testfile.txt", "myuser", "mygrp"
+        )
+        self.get_loader.return_value = jinja2.DictLoader(
+            {"testfile.txt": "debug = {{ debug }}"}
+        )
         sunbeam_templating.sidecar_config_render(
-            container_mock,
-            config,
-            "/tmp/templates",
-            "essex",
-            {'debug': True})
+            container_mock, config, "/tmp/templates", "essex", {"debug": True}
+        )
         self.assertFalse(container_mock.push.called)

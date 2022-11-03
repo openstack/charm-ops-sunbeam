@@ -8,7 +8,7 @@ needs to be applied to user supplied charm configuration. The context
 has access to the charm object.
 
 Below is an example which applies logic to the charm config as well as
-collecting the application name to constuct the context.
+collecting the application name to construct the context.
 
 .. code:: python
 

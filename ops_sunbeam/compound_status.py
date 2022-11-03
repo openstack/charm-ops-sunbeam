@@ -1,5 +1,18 @@
-"""
-A mini library for tracking status messages.
+# Copyright 2022 Canonical Ltd.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""A mini library for tracking status messages.
 
 We want this because keeping track of everything
 with a single unit.status is too difficult.
@@ -11,12 +24,31 @@ aspects of the application without clobbering other parts.
 """
 import json
 import logging
-from typing import Callable, Dict, Tuple, Optional
+from typing import (
+    Callable,
+    Dict,
+    Optional,
+    Tuple,
+)
 
-from ops.charm import CharmBase
-from ops.framework import Handle, Object, StoredStateData, CommitEvent
-from ops.model import ActiveStatus, StatusBase, UnknownStatus, WaitingStatus
-from ops.storage import NoSnapshotError
+from ops.charm import (
+    CharmBase,
+)
+from ops.framework import (
+    CommitEvent,
+    Handle,
+    Object,
+    StoredStateData,
+)
+from ops.model import (
+    ActiveStatus,
+    StatusBase,
+    UnknownStatus,
+    WaitingStatus,
+)
+from ops.storage import (
+    NoSnapshotError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +62,7 @@ STATUS_PRIORITIES = {
 
 
 class Status:
-    """
-    An atomic status.
+    """An atomic status.
 
     A wrapper around a StatusBase from ops,
     that adds a priority, label,
@@ -39,8 +70,7 @@ class Status:
     """
 
     def __init__(self, label: str, priority: int = 0) -> None:
-        """
-        Create a new Status object.
+        """Create a new Status object.
 
         label: string label
         priority: integer, higher number is higher priority, default is 0
@@ -59,8 +89,7 @@ class Status:
         self.on_update: Optional[Callable[[], None]] = None
 
     def set(self, status: StatusBase) -> None:
-        """
-        Set the status.
+        """Set the status.
 
         Will also run the on_update hook if available
         (should be set by the pool so the pool knows when it should update).
@@ -71,8 +100,7 @@ class Status:
             self.on_update()
 
     def message(self) -> str:
-        """
-        Get the status message consistently.
+        """Get the status message consistently.
 
         Useful because UnknownStatus has no message attribute.
         """
@@ -81,8 +109,7 @@ class Status:
         return self.status.message
 
     def priority(self) -> Tuple[int, int]:
-        """
-        Return a value to use for sorting statuses by priority.
+        """Return a value to use for sorting statuses by priority.
 
         Used by the pool to retrieve the highest priority status
         to display to the user.
@@ -98,16 +125,14 @@ class Status:
 
 
 class StatusPool(Object):
-    """
-    A pool of Status objects.
+    """A pool of Status objects.
 
     This is implemented as an `Object`,
     so we can more simply save state between hook executions.
     """
 
     def __init__(self, charm: CharmBase) -> None:
-        """
-        Init the status pool and restore from stored state if available.
+        """Init the status pool and restore from stored state if available.
 
         Note that instantiating more than one StatusPool here is not supported,
         due to hardcoded framework stored data IDs.
@@ -143,15 +168,14 @@ class StatusPool(Object):
         charm.framework.observe(charm.framework.on.commit, self._on_commit)
 
     def add(self, status: Status) -> None:
-        """
-        Idempotently add a status object to the pool.
+        """Idempotently add a status object to the pool.
 
         Reconstitute from saved state if it's a new status.
         """
         if (
-            status.never_set and
-            status.label in self._status_state and
-            status.label not in self._pool
+            status.never_set
+            and status.label in self._status_state
+            and status.label not in self._pool
         ):
             # If this status hasn't been seen or set yet,
             # and we have saved state for it,
@@ -168,24 +192,24 @@ class StatusPool(Object):
         self.on_update()
 
     def summarise(self) -> str:
-        """
-        Return a human readable summary of all the statuses in the pool.
+        """Return a human readable summary of all the statuses in the pool.
 
         Will be a multi-line string.
         """
         lines = []
         for status in sorted(self._pool.values(), key=lambda x: x.priority()):
-            lines.append("{label:>30}: {status:>10} | {message}".format(
-                label=status.label,
-                message=status.message(),
-                status=status.status.name,
-            ))
+            lines.append(
+                "{label:>30}: {status:>10} | {message}".format(
+                    label=status.label,
+                    message=status.message(),
+                    status=status.status.name,
+                )
+            )
 
         return "\n".join(lines)
 
     def _on_commit(self, _event: CommitEvent) -> None:
-        """
-        Store the current state of statuses.
+        """Store the current state of statuses.
 
         So we can restore them on the next run of the charm.
         """
@@ -199,8 +223,7 @@ class StatusPool(Object):
         self._charm.framework._storage.commit()
 
     def on_update(self) -> None:
-        """
-        Update the unit status with the current highest priority status.
+        """Update the unit status with the current highest priority status.
 
         Use as a hook to run whenever a status is updated in the pool.
         """
@@ -223,5 +246,5 @@ class StatusPool(Object):
                 "({}){}".format(
                     status.label,
                     " " + message if message else "",
-                )
+                ),
             )

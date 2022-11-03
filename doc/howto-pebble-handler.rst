@@ -15,7 +15,7 @@ Common Pebble handler changes
 ASO provides a pebble handler base classes which provide the starting point
 for writing a new handler. If the container runs a service then the
 `ServicePebbleHandler` should be used. If the container does not provide a
-service (perhaps its just an environment for executing commands that affact
+service (perhaps its just an environment for executing commands that effect
 other container) then `PebbleHandler` should be used.
 
 .. code:: python
@@ -55,7 +55,7 @@ all available contexts.
                 'root',
                 'root')]
 
-If a service should be running in the conainer the handler specifies the
+If a service should be running in the container the handler specifies the
 layer describing the service that will be passed to pebble.
 
 .. code:: python

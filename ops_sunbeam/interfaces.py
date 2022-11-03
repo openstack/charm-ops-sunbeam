@@ -15,15 +15,20 @@
 """Common interfaces not charm specific."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import (
+    Dict,
+    List,
+    Optional,
+)
 
 import ops.model
-
-from ops.framework import EventBase
-from ops.framework import EventSource
-from ops.framework import Object
-from ops.framework import ObjectEvents
-from ops.framework import StoredState
+from ops.framework import (
+    EventBase,
+    EventSource,
+    Object,
+    ObjectEvents,
+    StoredState,
+)
 
 
 class PeersRelationCreatedEvent(EventBase):

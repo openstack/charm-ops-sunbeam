@@ -14,11 +14,13 @@
 
 """Base classes for defining an OVN charm using the Operator framework."""
 
-from typing import List
+from typing import (
+    List,
+)
 
-from . import relation_handlers as ovn_relation_handlers
-from .. import relation_handlers as sunbeam_rhandlers
 from .. import charm as sunbeam_charm
+from .. import relation_handlers as sunbeam_rhandlers
+from . import relation_handlers as ovn_relation_handlers
 
 
 class OSBaseOVNOperatorCharm(sunbeam_charm.OSBaseOperatorCharm):

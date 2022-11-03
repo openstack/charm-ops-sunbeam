@@ -31,25 +31,32 @@ containers and managing the service running in the container.
 
 import ipaddress
 import logging
-from typing import List, Mapping
+from typing import (
+    List,
+    Mapping,
+)
 
+import charms.observability_libs.v0.kubernetes_service_patch as kube_svc_patch
 import ops.charm
 import ops.framework
 import ops.model
 import ops.pebble
-
-from ops.model import ActiveStatus, MaintenanceStatus
-
-from lightkube import Client
-from lightkube.resources.core_v1 import Service
+from lightkube import (
+    Client,
+)
+from lightkube.resources.core_v1 import (
+    Service,
+)
+from ops.model import (
+    ActiveStatus,
+    MaintenanceStatus,
+)
 
 import ops_sunbeam.compound_status as compound_status
 import ops_sunbeam.config_contexts as sunbeam_config_contexts
 import ops_sunbeam.container_handlers as sunbeam_chandlers
 import ops_sunbeam.core as sunbeam_core
 import ops_sunbeam.relation_handlers as sunbeam_rhandlers
-
-import charms.observability_libs.v0.kubernetes_service_patch as kube_svc_patch
 
 logger = logging.getLogger(__name__)
 
@@ -71,12 +78,13 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self.status_pool.add(self.status)
         self._state.set_default(bootstrapped=False)
         self.bootstrap_status = compound_status.Status(
-            "bootstrap",
-            priority=90)
+            "bootstrap", priority=90
+        )
         self.status_pool.add(self.bootstrap_status)
         if not self.bootstrapped():
-            self.bootstrap_status.set(MaintenanceStatus(
-                "Service not bootstrapped"))
+            self.bootstrap_status.set(
+                MaintenanceStatus("Service not bootstrapped")
+            )
         self.relation_handlers = self.get_relation_handlers()
         self.pebble_handlers = self.get_pebble_handlers()
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -145,9 +153,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         if self.can_add_handler("cloud-credentials", handlers):
             self.ccreds = sunbeam_rhandlers.CloudCredentialsRequiresHandler(
                 self,
-                'cloud-credentials',
+                "cloud-credentials",
                 self.configure_charm,
-                'cloud-credentials' in self.mandatory_relations,
+                "cloud-credentials" in self.mandatory_relations,
             )
             handlers.append(self.ccreds)
         return handlers
@@ -162,25 +170,26 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         ip_sans = []
         for relation_name in self.meta.relations.keys():
             for relation in self.framework.model.relations.get(
-                    relation_name, []):
+                relation_name, []
+            ):
                 binding = self.model.get_binding(relation)
                 ip_sans.append(binding.network.ingress_address)
                 ip_sans.append(binding.network.bind_address)
 
-        for binding_name in ['public']:
+        for binding_name in ["public"]:
             try:
                 binding = self.model.get_binding(binding_name)
                 ip_sans.append(binding.network.ingress_address)
                 ip_sans.append(binding.network.bind_address)
             except ops.model.ModelError:
-                logging.debug(f'No binding found for {binding_name}')
+                logging.debug(f"No binding found for {binding_name}")
         return ip_sans
 
     def get_domain_name_sans(self) -> List[str]:
         """Get Domain names for service."""
         domain_name_sans = []
-        for binding_config in ['admin', 'internal', 'public']:
-            hostname = self.config.get(f'os-{binding_config}-hostname')
+        for binding_config in ["admin", "internal", "public"]:
+            hostname = self.config.get(f"os-{binding_config}-hostname")
             if hostname:
                 domain_name_sans.append(hostname)
         return domain_name_sans
@@ -200,8 +209,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         ]
 
     def get_named_pebble_handler(
-        self,
-        container_name: str
+        self, container_name: str
     ) -> sunbeam_chandlers.PebbleHandler:
         """Get pebble handler matching container_name."""
         pebble_handlers = [
@@ -209,16 +217,16 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             for h in self.pebble_handlers
             if h.container_name == container_name
         ]
-        assert len(pebble_handlers) < 2, ("Multiple pebble handlers with the "
-                                          "same name found.")
+        assert len(pebble_handlers) < 2, (
+            "Multiple pebble handlers with the " "same name found."
+        )
         if pebble_handlers:
             return pebble_handlers[0]
         else:
             return None
 
     def get_named_pebble_handlers(
-        self,
-        container_names: List[str]
+        self, container_names: List[str]
     ) -> List[sunbeam_chandlers.PebbleHandler]:
         """Get pebble handlers matching container_names."""
         return [
@@ -227,6 +235,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             if h.container_name in container_names
         ]
 
+    # flake8: noqa: C901
     def configure_charm(self, event: ops.framework.EventBase) -> None:
         """Catchall handler to configure charm services."""
         if self.supports_peer_relation and not (
@@ -246,19 +255,22 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             else:
                 logging.debug(
                     f"Not running init for {ph.service_name},"
-                    " container not ready")
+                    " container not ready"
+                )
 
         for ph in self.pebble_handlers:
             if not ph.service_ready:
                 logging.debug(
-                    f"Aborting container {ph.service_name} service not ready")
+                    f"Aborting container {ph.service_name} service not ready"
+                )
                 return
 
         if not self.bootstrapped():
             if not self._do_bootstrap():
                 self._state.bootstrapped = False
                 logging.warning(
-                    "Failed to bootstrap the service, event deferred")
+                    "Failed to bootstrap the service, event deferred"
+                )
                 # Defer the event to re-trigger the bootstrap process
                 event.defer()
                 return
@@ -306,8 +318,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     @property
     def databases(self) -> Mapping[str, str]:
-        """
-        Return a mapping of database relation names to database names.
+        """Return a mapping of database relation names to database names.
 
         Use this to define the databases required by an application.
 
@@ -322,9 +333,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         It defaults to loading a relation named "database",
         with the database named after the service name.
         """
-        return {
-            "database": self.service_name.replace("-", "_")
-        }
+        return {"database": self.service_name.replace("-", "_")}
 
     def _on_config_changed(self, event: ops.framework.EventBase) -> None:
         self.configure_charm(event)
@@ -345,7 +354,8 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             if handler.mandatory and handler.ready
         }
         not_ready_relations = self.mandatory_relations.difference(
-            ready_relations)
+            ready_relations
+        )
 
         if len(not_ready_relations) != 0:
             logger.info(f"Relations {not_ready_relations} incomplete")
@@ -369,7 +379,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         return ra
 
     def bootstrapped(self) -> bool:
-        """Determine whether the service has been boostrapped."""
+        """Determine whether the service has been bootstrapped."""
         return self._state.bootstrapped
 
     def leader_set(self, settings: dict = None, **kwargs) -> None:
@@ -401,24 +411,26 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         :raises: pebble.ExecError
         """
         if not self.unit.is_leader():
-            logging.info('Not lead unit, skipping DB syncs')
+            logging.info("Not lead unit, skipping DB syncs")
             return
         try:
             if self.db_sync_cmds:
                 logger.info("Syncing database...")
                 container = self.unit.get_container(
-                    self.db_sync_container_name)
+                    self.db_sync_container_name
+                )
                 for cmd in self.db_sync_cmds:
-                    logging.debug('Running sync: \n%s', cmd)
-                    process = container.exec(cmd, timeout=5*60)
+                    logging.debug("Running sync: \n%s", cmd)
+                    process = container.exec(cmd, timeout=5 * 60)
                     out, warnings = process.wait_output()
                     if warnings:
                         for line in warnings.splitlines():
-                            logger.warning('DB Sync Out: %s', line.strip())
-                    logging.debug('Output from database sync: \n%s', out)
+                            logger.warning("DB Sync Out: %s", line.strip())
+                    logging.debug("Output from database sync: \n%s", out)
         except AttributeError:
             logger.warning(
-                "Not DB sync ran. Charm does not specify self.db_sync_cmds")
+                "Not DB sync ran. Charm does not specify self.db_sync_cmds"
+            )
 
     def _do_bootstrap(self) -> bool:
         """Perform bootstrap.
@@ -431,21 +443,17 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             self.bootstrap_status.set(ActiveStatus())
             return True
         except ops.pebble.ExecError as e:
-            logger.exception('Failed to bootstrap')
-            logger.error('Exited with code %d. Stderr:', e.exit_code)
+            logger.exception("Failed to bootstrap")
+            logger.error("Exited with code %d. Stderr:", e.exit_code)
             for line in e.stderr.splitlines():
-                logger.error('    %s', line)
+                logger.error("    %s", line)
             return False
 
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     """Base class for OpenStack API operators."""
 
-    mandatory_relations = {
-        'database',
-        'identity-service',
-        'ingress-public'
-    }
+    mandatory_relations = {"database", "identity-service", "ingress-public"}
 
     def __init__(self, framework: ops.framework.Framework) -> None:
         """Run constructor."""
@@ -507,11 +515,13 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         update the relevant endpoints with the identity service, and then
         call the configure_charm.
         """
-        logger.debug('Received an ingress_changed event')
+        logger.debug("Received an ingress_changed event")
         try:
             if self.id_svc.update_service_endpoints:
-                logger.debug('Updating service endpoints after ingress '
-                             'relation changed.')
+                logger.debug(
+                    "Updating service endpoints after ingress "
+                    "relation changed."
+                )
                 self.id_svc.update_service_endpoints(self.service_endpoints)
         except AttributeError:
             pass
@@ -540,17 +550,20 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
             if load_balancer_status:
                 ingress_addresses = load_balancer_status.ingress
                 if ingress_addresses:
-                    logger.debug('Found ingress addresses on loadbalancer '
-                                 'status')
+                    logger.debug(
+                        "Found ingress addresses on loadbalancer " "status"
+                    )
                     ingress_address = ingress_addresses[0]
                     addr = ingress_address.hostname or ingress_address.ip
                     if addr:
-                        logger.debug('Using ingress address from loadbalancer '
-                                     f'as {addr}')
+                        logger.debug(
+                            "Using ingress address from loadbalancer "
+                            f"as {addr}"
+                        )
                         return ingress_address.hostname or ingress_address.ip
 
         hostname = self.model.get_binding(
-            'identity-service'
+            "identity-service"
         ).network.ingress_address
         return hostname
 
@@ -559,9 +572,11 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         """Url for accessing the public endpoint for this service."""
         try:
             if self.ingress_public.url:
-                logger.debug('Ingress-public relation found, returning '
-                             'ingress-public.url of: %s',
-                             self.ingress_public.url)
+                logger.debug(
+                    "Ingress-public relation found, returning "
+                    "ingress-public.url of: %s",
+                    self.ingress_public.url,
+                )
                 return self.ingress_public.url
         except AttributeError:
             pass
@@ -581,9 +596,11 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
         """Url for accessing the internal endpoint for this service."""
         try:
             if self.ingress_internal.url:
-                logger.debug('Ingress-internal relation found, returning '
-                             'ingress_internal.url of: %s',
-                             self.ingress_internal.url)
+                logger.debug(
+                    "Ingress-internal relation found, returning "
+                    "ingress_internal.url of: %s",
+                    self.ingress_internal.url,
+                )
                 return self.ingress_internal.url
         except AttributeError:
             pass
@@ -669,4 +686,4 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     @property
     def healthcheck_http_url(self) -> str:
         """Healthcheck HTTP URL for the service."""
-        return f'http://localhost:{self.default_public_ingress_port}/'
+        return f"http://localhost:{self.default_public_ingress_port}/"

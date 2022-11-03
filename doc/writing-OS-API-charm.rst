@@ -107,7 +107,7 @@ Test Service
 ============
 
 Check that the juju status shows the charms is active and no error messages are
-preset. Then check the ironic api service is reponding.
+preset. Then check the ironic api service is responding.
 
 .. code:: bash
 

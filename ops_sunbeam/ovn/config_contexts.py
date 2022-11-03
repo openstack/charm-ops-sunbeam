@@ -28,7 +28,8 @@ class OVNDBConfigContext(sunbeam_ccontexts.ConfigContext):
     def context(self) -> dict:
         """Context for OVN certs and leadership."""
         return {
-            'is_charm_leader': self.charm.unit.is_leader(),
-            'ovn_key': '/etc/ovn/key_host',
-            'ovn_cert': '/etc/ovn/cert_host',
-            'ovn_ca_cert': '/etc/ovn/ovn-central.crt'}
+            "is_charm_leader": self.charm.unit.is_leader(),
+            "ovn_key": "/etc/ovn/key_host",
+            "ovn_cert": "/etc/ovn/cert_host",
+            "ovn_ca_cert": "/etc/ovn/ovn-central.crt",
+        }

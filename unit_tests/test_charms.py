@@ -17,14 +17,18 @@
 """Test charms for unit tests."""
 
 import os
-import tempfile
 import sys
-
-from typing import TYPE_CHECKING
+import tempfile
+from typing import (
+    TYPE_CHECKING,
+)
 
 if TYPE_CHECKING:
     import ops.framework
-from typing import List
+
+from typing import (
+    List,
+)
 
 sys.path.append("unit_tests/lib")  # noqa
 sys.path.append("src")  # noqa
@@ -44,9 +48,7 @@ options:
     type: string
 """
 
-INITIAL_CHARM_CONFIG = {
-    'debug': 'true',
-    'region': 'RegionOne'}
+INITIAL_CHARM_CONFIG = {"debug": "true", "region": "RegionOne"}
 
 CHARM_METADATA = """
 name: my-service
@@ -206,7 +208,10 @@ class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
     wsgi_admin_script = "/bin/wsgi_admin"
     wsgi_public_script = "/bin/wsgi_public"
     mandatory_relations = {
-        "database", "amqp", "identity-service", "ingress-public"
+        "database",
+        "amqp",
+        "identity-service",
+        "ingress-public",
     }
 
     def __init__(self, framework: "ops.framework.Framework") -> None:
@@ -256,7 +261,7 @@ class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
     @property
     def healthcheck_http_url(self) -> str:
         """Healthcheck HTTP URL for the service."""
-        return f'http://localhost:{self.default_public_ingress_port}/v3'
+        return f"http://localhost:{self.default_public_ingress_port}/v3"
 
 
 class MultiSvcPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
@@ -300,5 +305,6 @@ class TestMultiSvcCharm(MyAPICharm):
                 self.container_configs,
                 self.template_dir,
                 self.openstack_release,
-                self.configure_charm
-            )]
+                self.configure_charm,
+            )
+        ]

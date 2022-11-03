@@ -51,7 +51,7 @@ an observer for relation changed events.
         self.framework.observe(db_relation_event, self._on_database_changed)
         return db
 
-The method run when tha changed event is seen checks whether all required data
+The method runs when the changed event is seen checks whether all required data
 has been provided. If it is then it calls back to the charm, if not then no
 action is taken.
 
