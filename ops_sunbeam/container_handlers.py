@@ -282,7 +282,7 @@ class PebbleHandler(ops.charm.Object):
 
         self.status.set(ActiveStatus(""))
 
-    def _start_all(self, restart: bool = True) -> None:
+    def start_all(self, restart: bool = True) -> None:
         """Start services in container.
 
         :param restart: Whether to stop services before starting them.
@@ -332,7 +332,7 @@ class ServicePebbleHandler(PebbleHandler):
             container.add_layer(
                 self.service_name, self.get_layer(), combine=True
             )
-        self._start_all(restart=restart)
+        self.start_all(restart=restart)
 
 
 class WSGIPebbleHandler(PebbleHandler):
@@ -375,7 +375,7 @@ class WSGIPebbleHandler(PebbleHandler):
             container.add_layer(
                 self.service_name, self.get_layer(), combine=True
             )
-        self._start_all(restart=restart)
+        self.start_all(restart=restart)
 
     def start_service(self) -> None:
         """Start the service."""
