@@ -385,14 +385,14 @@ class RabbitMQHandler(RelationHandler):
         """Whether handler is ready for use."""
         try:
             return bool(self.interface.password)
-        except AttributeError:
+        except (AttributeError, KeyError):
             return False
 
     def context(self) -> dict:
         """Context containing AMQP connection data."""
         try:
             hosts = self.interface.hostnames
-        except AttributeError:
+        except (AttributeError, KeyError):
             return {}
         if not hosts:
             return {}
@@ -472,7 +472,7 @@ class IdentityServiceRequiresHandler(RelationHandler):
         """Whether handler is ready for use."""
         try:
             return bool(self.interface.service_password)
-        except AttributeError:
+        except (AttributeError, KeyError):
             return False
 
 
@@ -521,7 +521,7 @@ class BasePeerHandler(RelationHandler):
                 for k, v in self.interface.get_all_app_data().items()
             }
             return _db
-        except AttributeError:
+        except (AttributeError, KeyError):
             return {}
 
     def set_app_data(self, settings: dict) -> None:
@@ -836,5 +836,5 @@ class CloudCredentialsRequiresHandler(RelationHandler):
         """Whether handler is ready for use."""
         try:
             return bool(self.interface.password)
-        except AttributeError:
+        except (AttributeError, KeyError):
             return False

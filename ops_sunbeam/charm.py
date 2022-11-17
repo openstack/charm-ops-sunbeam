@@ -522,7 +522,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                     "relation changed."
                 )
                 self.id_svc.update_service_endpoints(self.service_endpoints)
-        except AttributeError:
+        except (AttributeError, KeyError):
             pass
 
         self.configure_charm(event)
@@ -577,7 +577,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                     self.ingress_public.url,
                 )
                 return self.ingress_public.url
-        except AttributeError:
+        except (AttributeError, KeyError):
             pass
 
         return self.service_url(self.public_ingress_address)
@@ -601,7 +601,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
                     self.ingress_internal.url,
                 )
                 return self.ingress_internal.url
-        except AttributeError:
+        except (AttributeError, KeyError):
             pass
 
         hostname = self.model.get_binding(

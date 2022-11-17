@@ -71,7 +71,7 @@ action is taken.
         try:
             # Nothing to wait for
             return bool(self.interface.databases())
-        except AttributeError:
+        except (AttributeError, KeyError):
             return False
 
 The `ready` property is common across all handlers and allows the charm to
@@ -86,7 +86,7 @@ templates. ASO places each relation context in its own namespace.
         """Context containing database connection data."""
         try:
             databases = self.interface.databases()
-        except AttributeError:
+        except (AttributeError, KeyError):
             return {}
         if not databases:
             return {}
