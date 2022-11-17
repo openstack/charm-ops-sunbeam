@@ -18,6 +18,10 @@ from typing import (
     List,
 )
 
+from ops.model import (
+    ActiveStatus,
+)
+
 from .. import container_handlers as sunbeam_chandlers
 from .. import core as sunbeam_core
 
@@ -46,6 +50,7 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
         self.setup_dirs()
         self.write_config(context)
         self._state.service_ready = True
+        self.status.set(ActiveStatus(""))
 
     @property
     def service_description(self) -> str:
