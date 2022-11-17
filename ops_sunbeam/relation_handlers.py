@@ -78,9 +78,9 @@ class RelationHandler(ops.charm.Object):
         self.callback_f = callback_f
         self.interface = self.setup_event_handler()
         self.mandatory = mandatory
-        status = compound_status.Status(self.relation_name)
-        self.charm.status_pool.add(status)
-        self.set_status(status)
+        self.status = compound_status.Status(self.relation_name)
+        self.charm.status_pool.add(self.status)
+        self.set_status(self.status)
 
     def set_status(self, status: compound_status.Status) -> None:
         """Set the status based on current state.
@@ -193,6 +193,8 @@ class IngressHandler(RelationHandler):
         """
         # Callback call to update keystone endpoints
         self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     @property
     def ready(self) -> bool:
@@ -372,6 +374,7 @@ class RabbitMQHandler(RelationHandler):
             self.charm, self.relation_name, self.username, self.vhost
         )
         self.framework.observe(amqp.on.ready, self._on_amqp_ready)
+        self.framework.observe(amqp.on.goneaway, self._on_amqp_goneaway)
         return amqp
 
     def _on_amqp_ready(self, event: ops.framework.EventBase) -> None:
@@ -379,6 +382,14 @@ class RabbitMQHandler(RelationHandler):
         # Ready is only emitted when the interface considers
         # that the relation is complete (indicated by a password)
         self.callback_f(event)
+
+    def _on_amqp_goneaway(self, event: ops.framework.EventBase) -> None:
+        """Handle AMQP change events."""
+        # Goneaway is only emitted when the interface considers
+        # that the relation is broken
+        self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     @property
     def ready(self) -> bool:
@@ -452,6 +463,9 @@ class IdentityServiceRequiresHandler(RelationHandler):
         self.framework.observe(
             id_svc.on.ready, self._on_identity_service_ready
         )
+        self.framework.observe(
+            id_svc.on.goneaway, self._on_identity_service_goneaway
+        )
         return id_svc
 
     def _on_identity_service_ready(
@@ -461,6 +475,16 @@ class IdentityServiceRequiresHandler(RelationHandler):
         # Ready is only emitted when the interface considers
         # that the relation is complete (indicated by a password)
         self.callback_f(event)
+
+    def _on_identity_service_goneaway(
+        self, event: ops.framework.EventBase
+    ) -> None:
+        """Handle identity service gone away event."""
+        # Goneaway is only emitted when the interface considers
+        # that the relation is broken or departed.
+        self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     def update_service_endpoints(self, service_endpoints: dict) -> None:
         """Update service endpoints on the relation."""
@@ -825,11 +849,20 @@ class CloudCredentialsRequiresHandler(RelationHandler):
         self.framework.observe(
             credentials_service.on.ready, self._credentials_ready
         )
+        self.framework.observe(
+            credentials_service.on.goneaway, self._credentials_goneaway
+        )
         return credentials_service
 
     def _credentials_ready(self, event: ops.framework.EventBase) -> None:
         """React to credential ready event."""
         self.callback_f(event)
+
+    def _credentials_goneaway(self, event: ops.framework.EventBase) -> None:
+        """React to credential goneaway event."""
+        self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     @property
     def ready(self) -> bool:
