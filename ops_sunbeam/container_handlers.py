@@ -166,6 +166,7 @@ class PebbleHandler(ops.charm.Object):
         self.setup_dirs()
         self.write_config(context)
         self._state.service_ready = True
+        self.status.set(ActiveStatus(""))
 
     def default_container_configs(
         self,
@@ -315,6 +316,7 @@ class ServicePebbleHandler(PebbleHandler):
         else:
             self.start_service(restart=False)
         self._state.service_ready = True
+        self.status.set(ActiveStatus(""))
 
     def start_service(self, restart: bool = True) -> None:
         """Check and start services in container.
@@ -447,6 +449,7 @@ class WSGIPebbleHandler(PebbleHandler):
         else:
             self.start_wsgi(restart=False)
         self._state.service_ready = True
+        self.status.set(ActiveStatus(""))
 
     @property
     def wsgi_conf(self) -> str:
