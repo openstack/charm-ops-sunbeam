@@ -27,6 +27,9 @@ from typing import (
 
 import ops.charm
 import ops.framework
+from ops.model import (
+    BlockedStatus,
+)
 
 from .. import relation_handlers as sunbeam_rhandlers
 
@@ -475,11 +478,22 @@ class OVSDBCMSRequiresHandler(
         self.framework.observe(
             ovsdb_svc.on.ready, self._on_ovsdb_service_ready
         )
+        self.framework.observe(
+            ovsdb_svc.on.goneaway, self._on_ovsdb_service_goneaway
+        )
         return ovsdb_svc
 
     def _on_ovsdb_service_ready(self, event: ops.framework.EventBase) -> None:
         """Handle OVSDB CMS change events."""
         self.callback_f(event)
+
+    def _on_ovsdb_service_goneaway(
+        self, event: ops.framework.EventBase
+    ) -> None:
+        """Handle OVSDB CMS change events."""
+        self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     @property
     def ready(self) -> bool:
