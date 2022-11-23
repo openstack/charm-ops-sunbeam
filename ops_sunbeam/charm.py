@@ -142,7 +142,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             )
             handlers.append(self.peers)
         if self.can_add_handler("certificates", handlers):
-            self.certs = sunbeam_rhandlers.CertificatesHandler(
+            self.certs = sunbeam_rhandlers.TlsCertificatesHandler(
                 self,
                 "certificates",
                 self.configure_charm,

@@ -1,15 +1,4 @@
-flake8-annotations
-flake8-docstrings
-coverage>=3.6
-mock>=1.2
-flake8
-pyflakes
-stestr>=2.2.0
-requests>=2.18.4
-psutil
-# oslo.i18n dropped py35 support
-oslo.i18n<4.0.0
-git+https://github.com/openstack-charmers/zaza.git#egg=zaza
-git+https://github.com/openstack-charmers/zaza-openstack-tests.git#egg=zaza.openstack
-pytz    # workaround for 14.04 pip/tox
-pyudev  # for ceph-* charm unit tests (not mocked?)
+coverage
+mock
+stestr
+requests

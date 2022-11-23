@@ -26,7 +26,6 @@ from urllib.parse import (
     urlparse,
 )
 
-import cryptography.hazmat.primitives.serialization as serialization
 import ops.charm
 import ops.framework
 from ops.model import (
@@ -726,7 +725,7 @@ class CephClientHandler(RelationHandler):
         return ctxt
 
 
-class CertificatesHandler(RelationHandler):
+class TlsCertificatesHandler(RelationHandler):
     """Handler for certificates interface."""
 
     def __init__(
@@ -738,76 +737,173 @@ class CertificatesHandler(RelationHandler):
         mandatory: bool = False,
     ) -> None:
         """Run constructor."""
-        # Lazy import to ensure this lib is only required if the charm
-        # has this relation.
-        import interface_tls_certificates.ca_client as ca_client
-
-        self.ca_client = ca_client
         self.sans = sans
         super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> None:
         """Configure event handlers for peer relation."""
         logger.debug("Setting up certificates event handler")
-        certs = self.ca_client.CAClient(
-            self.charm,
-            self.relation_name,
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        from charms.tls_certificates_interface.v1.tls_certificates import (
+            TLSCertificatesRequiresV1,
         )
-        self.framework.observe(certs.on.ca_available, self._request_certs)
+
+        self.certificates = TLSCertificatesRequiresV1(
+            self.charm, "certificates"
+        )
+        self.framework.observe(self.charm.on.install, self._on_install)
         self.framework.observe(
-            certs.on.tls_server_config_ready, self._certs_ready
+            self.charm.on.certificates_relation_joined,
+            self._on_certificates_relation_joined,
         )
-        return certs
+        self.framework.observe(
+            self.charm.on.certificates_relation_broken,
+            self._on_certificates_relation_broken,
+        )
+        self.framework.observe(
+            self.certificates.on.certificate_available,
+            self._on_certificate_available,
+        )
+        self.framework.observe(
+            self.certificates.on.certificate_expiring,
+            self._on_certificate_expiring,
+        )
+        self.framework.observe(
+            self.certificates.on.certificate_expired,
+            self._on_certificate_expired,
+        )
+        return self.certificates
 
-    def _request_certs(self, event: ops.framework.EventBase) -> None:
-        """Request Certificates."""
-        logger.debug(f"Requesting cert for {self.sans}")
-        self.interface.request_server_certificate(
-            self.model.unit.name.replace("/", "-"), self.sans
+    def _on_install(self, event: ops.framework.EventBase) -> None:
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        from charms.tls_certificates_interface.v1.tls_certificates import (
+            generate_private_key,
         )
+
+        peer_relation = self.model.get_relation("peers")
+        if not peer_relation:
+            event.defer()
+            return
+
+        private_key = generate_private_key()
+        peer_relation.data[self.charm.model.unit].update(
+            {
+                "private_key": private_key.decode(),
+            }
+        )
+
+    def _on_certificates_relation_joined(
+        self, event: ops.framework.EventBase
+    ) -> None:
+        # Lazy import to ensure this lib is only required if the charm
+        # has this relation.
+        from charms.tls_certificates_interface.v1.tls_certificates import (
+            generate_csr,
+        )
+
+        peer_relation = self.model.get_relation("peers")
+        if not peer_relation:
+            event.defer()
+            return
+
+        private_key = peer_relation.data[self.charm.model.unit].get(
+            "private_key"
+        )
+        csr = generate_csr(
+            private_key=private_key.encode(),
+            subject=self.charm.model.unit.name.replace("/", "-"),
+            sans=self.sans,
+        )
+        self.certificates.request_certificate_creation(
+            certificate_signing_request=csr
+        )
+
+    def _on_certificates_relation_broken(
+        self, event: ops.framework.EventBase
+    ) -> None:
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
+
+    def _on_certificate_available(
+        self, event: ops.framework.EventBase
+    ) -> None:
         self.callback_f(event)
 
-    def _certs_ready(self, event: ops.framework.EventBase) -> None:
-        """Request Certificates."""
-        self.callback_f(event)
+    def _on_certificate_expiring(self, event: ops.framework.EventBase) -> None:
+        logger.warning("Certificate getting expired")
+        self.status.set(ActiveStatus("Certificates are getting expired soon"))
+
+    def _on_certificate_expired(self, event: ops.framework.EventBase) -> None:
+        logger.warning("Certificate expired")
+        self.status.set(BlockedStatus("Certificates expired"))
+
+    def _get_csr_from_relation_unit_data(self) -> Optional[str]:
+        certificate_relations = list(self.model.relations[self.relation_name])
+        if not certificate_relations:
+            return None
+
+        # unit_data format:
+        # {"certificate_signing_requests": "['certificate_signing_request': 'CSRTEXT']"}
+        unit_data = certificate_relations[0].data[self.charm.model.unit]
+        csr = json.loads(unit_data.get("certificate_signing_requests", "[]"))
+        if not csr:
+            return None
+
+        csr = csr[0].get("certificate_signing_request", None)
+        return csr
+
+    def _get_cert_from_relation_data(self, csr: str) -> dict:
+        certificate_relations = list(self.model.relations[self.relation_name])
+        if not certificate_relations:
+            return {}
+
+        # app data format:
+        # {"certificates": "['certificate_signing_request': 'CSR',
+        #                    'certificate': 'CERT', 'ca': 'CA', 'chain': 'CHAIN']"}
+        certs = certificate_relations[0].data[certificate_relations[0].app]
+        certs = json.loads(certs.get("certificates", "[]"))
+        for certificate in certs:
+            csr_from_app = certificate.get("certificate_signing_request", "")
+            if csr.strip() == csr_from_app.strip():
+                return {
+                    "cert": certificate.get("certificate", None),
+                    "ca": certificate.get("ca", None),
+                    "chain": certificate.get("chain", []),
+                }
+
+        return {}
 
     @property
     def ready(self) -> bool:
         """Whether handler ready for use."""
-        return self.interface.is_server_cert_ready
+        csr_from_unit = self._get_csr_from_relation_unit_data()
+        if not csr_from_unit:
+            return False
+
+        certs = self._get_cert_from_relation_data(csr_from_unit)
+        return True if certs else False
 
     def context(self) -> dict:
         """Certificates context."""
-        key = self.interface.server_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption(),
+        csr_from_unit = self._get_csr_from_relation_unit_data()
+        if not csr_from_unit:
+            return {}
+
+        certs = self._get_cert_from_relation_data(csr_from_unit)
+        cert = certs["cert"]
+        ca_cert = certs["ca"] + "\n" + "\n".join(certs["chain"])
+
+        peer_relation = self.model.get_relation("peers")
+        key = peer_relation.data[self.charm.model.unit].get(
+            "private_key", None
         )
-        cert = self.interface.server_certificate.public_bytes(
-            encoding=serialization.Encoding.PEM
-        )
-        try:
-            root_ca_chain = self.interface.root_ca_chain.public_bytes(
-                encoding=serialization.Encoding.PEM
-            )
-        except self.ca_client.CAClientError:
-            # A root ca chain is not always available. If configured to just
-            # use vault with self-signed certificates, you will not get a ca
-            # chain. Instead, you will get a CAClientError being raised. For
-            # now, use a bytes() object for the root_ca_chain as it shouldn't
-            # cause problems and if a ca_cert_chain comes later, then it will
-            # get updated.
-            root_ca_chain = bytes()
-        ca_cert = (
-            self.interface.ca_certificate.public_bytes(
-                encoding=serialization.Encoding.PEM
-            )
-            + root_ca_chain
-        )
+
         ctxt = {
-            "key": key.decode(),
-            "cert": cert.decode(),
-            "ca_cert": ca_cert.decode(),
+            "key": key,
+            "cert": cert,
+            "ca_cert": ca_cert,
         }
         return ctxt
 

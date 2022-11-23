@@ -142,6 +142,24 @@ ULTaKTN2gp7E2BuxENtAyplrvLiXXYH3CqT528JgMdMm0al6X3MXo9WqbOg/KNpa
 4JSyyuZ42yGmYlhMCimlk3kVnDxb8PJLWOFnx6f9/i0RWUqnY0nU
 -----END RSA PRIVATE KEY-----"""
 
+TEST_CSR = """-----BEGIN CERTIFICATE REQUEST-----
+MIICxTCCAa0CAQAwRzEWMBQGA1UEAwwNb3ZuLWNlbnRyYWwtMDEtMCsGA1UELQwk
+ZTFhZjIxMmEtNTUxOC00MjkyLWIxZTktZGM3NThlZTZkMzEwMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzrJfdNfHKyzu9dAnoEi2DE9nTQnkUjGVIMXg
+8oCy5NgIm2ORoeXrdrr2ODIUepxX7M40cWmvoFiABK6DGgpP3wh6XosWftIc8hrX
+/KaHtL4iru+dKJF9d5TNe+vWoFY1jh3k/+c+F59UhdoRbw4QcSTgLBvsb/XC8pdD
+gc96GWgzyA5exZN9xXg8dvHCMKLLzCkAgHkMlkSPB6Ghi9bUeeXIYRvU8D+EMh+R
+hKaSsvOxRyISgkvE0cGQ86NIuXkNvvvr8bFYNLMxBNkjZrqlZyqhEsq0eZAAm5iu
+Fi33z3uBaA5d7V7wbYAxWuFlckdGTHql3vO/W2X3PHbT/TEBxQIDAQABoDkwNwYJ
+KoZIhvcNAQkOMSowKDAmBgNVHREEHzAdggwxMC4xLjEwNy4yMTSCDTEwLjE1Mi4x
+ODMuMTkwDQYJKoZIhvcNAQELBQADggEBADJSto8T6XiMdjMKekhS6SsQKNyijVJ0
+cJr7x1u8FLEbCWlLRO9kMroz4i4iSu5xYcewNsRioiN4A56FuoOE8qCjzAHczR/8
+Anah4rYJFt7wCu+RxfHEvBmSYgV0Rbq/KwjYnclCpTu/m5yrUmsI092+2AaOB/nA
+c0Npr5oZZPeWL4S3+c02IxCeH1EwxIQtfprA/VgCWpEU25ImQb/c14KF5EQEHhv6
+A5qVqdCCg4LlNrqiFYyVtHqDco+voq4W95KkkUYe20o16qOTwpR72qn75DagO/8I
+R3iMBPwkhi4+igbliU/EMLltTj8pMilUhc1Ewuji4QZhsM2qxgZkcBk=
+-----END CERTIFICATE REQUEST-----"""
+
 
 class ContainerCalls:
     """Object to log container calls."""
@@ -518,16 +536,14 @@ def add_complete_ceph_relation(harness: Harness) -> None:
 
 def add_certificates_relation_certs(harness: Harness, rel_id: str) -> None:
     """Add cert data to certificates relation."""
-    client_unit = harness.charm.unit.name.replace("/", "_")
+    cert = {
+        "certificate": TEST_SERVER_CERT,
+        "certificate_signing_request": TEST_CSR,
+        "ca": TEST_CA,
+        "chain": TEST_CHAIN,
+    }
     harness.update_relation_data(
-        rel_id,
-        "vault/0",
-        {
-            f"{client_unit}.server.cert": TEST_SERVER_CERT,
-            f"{client_unit}.server.key": TEST_SERVER_KEY,
-            "chain": TEST_CHAIN,
-            "ca": TEST_CA,
-        },
+        rel_id, "vault", {"certificates": json.dumps([cert])}
     )
 
 
@@ -535,8 +551,14 @@ def add_base_certificates_relation(harness: Harness) -> str:
     """Add certificates relation."""
     rel_id = harness.add_relation("certificates", "vault")
     harness.add_relation_unit(rel_id, "vault/0")
+    csr = {"certificate_signing_request": TEST_CSR}
     harness.update_relation_data(
-        rel_id, "vault/0", {"ingress-address": "10.0.0.34"}
+        rel_id,
+        harness.charm.unit.name,
+        {
+            "ingress-address": "10.0.0.34",
+            "certificate_signing_requests": json.dumps([csr]),
+        },
     )
     return rel_id
 
