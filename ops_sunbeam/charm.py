@@ -49,6 +49,11 @@ from lightkube import (
 from lightkube.resources.core_v1 import (
     Service,
 )
+from ops.charm import (
+    SecretChangedEvent,
+    SecretRemoveEvent,
+    SecretRotateEvent,
+)
 from ops.model import (
     ActiveStatus,
     MaintenanceStatus,
@@ -96,6 +101,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         self.relation_handlers = self.get_relation_handlers()
         self.pebble_handlers = self.get_pebble_handlers()
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.secret_changed, self._on_secret_changed)
+        self.framework.observe(self.on.secret_rotate, self._on_secret_rotate)
+        self.framework.observe(self.on.secret_remove, self._on_secret_remove)
 
     def can_add_handler(
         self,
@@ -344,6 +352,23 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def _on_config_changed(self, event: ops.framework.EventBase) -> None:
         self.configure_charm(event)
+
+    def _on_secret_changed(self, event: SecretChangedEvent) -> None:
+        # By default read the latest content of secret
+        # this will allow juju to trigger secret-remove
+        # event for old revision
+        event.secret.get_content(refresh=True)
+        self.configure_charm(event)
+
+    def _on_secret_rotate(self, event: SecretRotateEvent) -> None:
+        # Placeholder to handle secret rotate event
+        # charms should handle the event if required
+        pass
+
+    def _on_secret_remove(self, event: SecretRemoveEvent) -> None:
+        # Placeholder to handle secret remove event
+        # charms should handle the event if required
+        pass
 
     def containers_ready(self) -> bool:
         """Determine whether all containers are ready for configuration."""
