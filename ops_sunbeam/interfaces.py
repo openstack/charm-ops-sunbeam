@@ -131,7 +131,9 @@ class OperatorPeers(Object):
         if not self.peers_rel:
             return values
         for unit in self.peers_rel.units:
-            values.append(self.peers_rel.data[unit].get(key))
+            value = self.peers_rel.data[unit].get(key)
+            if value is not None:
+                values.append(value)
         return values
 
     def set_unit_data(self, settings: Dict[str, str]) -> None:
