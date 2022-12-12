@@ -284,7 +284,7 @@ class OVNDBClusterPeerHandler(
             )
             return False
         hostnames = self.interface.get_all_unit_values("bound-hostname")
-        if all(hostnames) < expected_remote_units:
+        if len(hostnames) < expected_remote_units:
             logging.debug(
                 "Not all units have published a bound-hostname. Current "
                 f"hostname list: {hostnames}"
