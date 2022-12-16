@@ -457,7 +457,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
     def __init__(self, framework: ops.framework.Framework) -> None:
         """Run constructor."""
         super().__init__(framework)
-        self._state.set_default(db_ready=False)
         self.service_patcher = kube_svc_patch.KubernetesServicePatch(
             self,
             ports=[(f"{self.app.name}", self.default_public_ingress_port)],

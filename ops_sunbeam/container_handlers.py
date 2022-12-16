@@ -51,8 +51,6 @@ ContainerDir = collections.namedtuple(
 class PebbleHandler(ops.charm.Object):
     """Base handler for Pebble based containers."""
 
-    _state = ops.framework.StoredState()
-
     def __init__(
         self,
         charm: ops.charm.CharmBase,
@@ -64,8 +62,6 @@ class PebbleHandler(ops.charm.Object):
     ) -> None:
         """Run constructor."""
         super().__init__(charm, None)
-        self._state.set_default(config_pushed=False)
-        self._state.set_default(service_ready=False)
         self.charm = charm
         self.container_name = container_name
         self.service_name = service_name
@@ -125,7 +121,6 @@ class PebbleHandler(ops.charm.Object):
                     logger.debug(f"Changes detected in {files_updated}")
                 else:
                     logger.debug("No file changes detected")
-            self._state.config_pushed = True
         else:
             logger.debug("Container not ready")
         if files_updated:
@@ -165,7 +160,6 @@ class PebbleHandler(ops.charm.Object):
         """
         self.setup_dirs()
         self.write_config(context)
-        self._state.service_ready = True
         self.status.set(ActiveStatus(""))
 
     def default_container_configs(
@@ -185,14 +179,13 @@ class PebbleHandler(ops.charm.Object):
         return self.charm.unit.get_container(self.container_name).can_connect()
 
     @property
-    def config_pushed(self) -> bool:
-        """Determine if configuration has been pushed to the container."""
-        return self._state.config_pushed
-
-    @property
     def service_ready(self) -> bool:
         """Determine whether the service the container provides is running."""
-        return self._state.service_ready
+        if not self.pebble_ready:
+            return False
+        container = self.charm.unit.get_container(self.container_name)
+        services = container.get_services()
+        return all([s.is_running() for s in services.values()])
 
     def execute(
         self, cmd: List, exception_on_error: bool = False, **kwargs: TypedDict
@@ -296,8 +289,11 @@ class PebbleHandler(ops.charm.Object):
                     f"Stopping {service_name} in {self.container_name}"
                 )
                 container.stop(service_name)
-            logger.debug(f"Starting {service_name} in {self.container_name}")
-            container.start(service_name)
+            if not service.is_running():
+                logger.debug(
+                    f"Starting {service_name} in {self.container_name}"
+                )
+                container.start(service_name)
 
 
 class ServicePebbleHandler(PebbleHandler):
@@ -315,7 +311,6 @@ class ServicePebbleHandler(PebbleHandler):
             self.start_service(restart=True)
         else:
             self.start_service(restart=False)
-        self._state.service_ready = True
         self.status.set(ActiveStatus(""))
 
     def start_service(self, restart: bool = True) -> None:
@@ -448,7 +443,6 @@ class WSGIPebbleHandler(PebbleHandler):
             self.start_wsgi(restart=True)
         else:
             self.start_wsgi(restart=False)
-        self._state.service_ready = True
         self.status.set(ActiveStatus(""))
 
     @property

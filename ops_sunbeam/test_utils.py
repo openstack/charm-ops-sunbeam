@@ -637,6 +637,7 @@ def get_harness(
             delay: float = 0.1,
         ) -> None:
             """Record start service events."""
+            super().start_services(services, timeout, delay)
             container_calls.add_start(self.container_name, services)
 
         def stop_services(
@@ -646,6 +647,7 @@ def get_harness(
             delay: float = 0.1,
         ) -> None:
             """Record stop service events."""
+            super().stop_services(services, timeout, delay)
             container_calls.add_stop(self.container_name, services)
 
     class _OSTestingModelBackend(_TestingModelBackend):
