@@ -49,7 +49,6 @@ class OVNPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
         """
         self.setup_dirs()
         self.write_config(context)
-        self._state.service_ready = True
         self.status.set(ActiveStatus(""))
 
     @property

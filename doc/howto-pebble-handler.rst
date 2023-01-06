@@ -104,7 +104,6 @@ with the event can be overridden.
         self.execute(["run", "special", "command"])
         logger.debug(f"Plan: {container.get_plan()}")
         self.ready = True
-        self._state.pebble_ready = True
         self.charm.configure_charm(event)
 
 Configuring Charm to use custom pebble handler
