@@ -284,16 +284,18 @@ class PebbleHandler(ops.charm.Object):
         container = self.charm.unit.get_container(self.container_name)
         services = container.get_services()
         for service_name, service in services.items():
-            if service.is_running() and restart:
-                logger.debug(
-                    f"Stopping {service_name} in {self.container_name}"
-                )
-                container.stop(service_name)
             if not service.is_running():
                 logger.debug(
                     f"Starting {service_name} in {self.container_name}"
                 )
                 container.start(service_name)
+                continue
+
+            if restart:
+                logger.debug(
+                    f"Restarting {service_name} in {self.container_name}"
+                )
+                container.restart(service_name)
 
 
 class ServicePebbleHandler(PebbleHandler):
