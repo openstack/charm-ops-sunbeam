@@ -43,7 +43,6 @@ from ops import (
     model,
 )
 from ops.testing import (
-    SIMULATE_CAN_CONNECT,
     Harness,
     _TestingModelBackend,
     _TestingPebbleClient,
@@ -675,14 +674,24 @@ def get_harness(
     class _OSTestingModelBackend(_TestingModelBackend):
         def get_pebble(self, socket_path: str) -> _OSTestingPebbleClient:
             """Get the testing pebble client."""
-            client = self._pebble_clients.get(socket_path, None)
+            container = socket_path.split("/")[
+                3
+            ]  # /charm/containers/<container_name>/pebble.socket
+            client = self._pebble_clients.get(container, None)
             if client is None:
+                # Below three lines are changes from parent class method
                 client = _OSTestingPebbleClient(self)
-                # Extract container name from:
-                # /charm/containers/placement-api/pebble.socket
-                client.container_name = socket_path.split("/")[3]
-                self._pebble_clients[socket_path] = client
-            self._pebble_clients_can_connect[client] = not SIMULATE_CAN_CONNECT
+                # Add container name to the pebble client
+                client.container_name = container
+                self._pebble_clients[container] = client
+
+                # we need to know which container a new pebble client belongs to
+                # so we can figure out which storage mounts must be simulated on
+                # this pebble client's mock file systems when storage is
+                # attached/detached later.
+                self._pebble_clients[container] = client
+
+            self._pebble_clients_can_connect[client] = False
             return client
 
         def network_get(
