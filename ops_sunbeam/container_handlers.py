@@ -282,6 +282,11 @@ class PebbleHandler(ops.charm.Object):
         :param restart: Whether to stop services before starting them.
         """
         container = self.charm.unit.get_container(self.container_name)
+        if not container.can_connect():
+            logger.debug(
+                f"Container {self.container_name} not ready, deferring restart"
+            )
+            return
         services = container.get_services()
         for service_name, service in services.items():
             if not service.is_running():
