@@ -15,8 +15,8 @@ Common Pebble handler changes
 ASO provides a pebble handler base classes which provide the starting point
 for writing a new handler. If the container runs a service then the
 `ServicePebbleHandler` should be used. If the container does not provide a
-service (perhaps its just an environment for executing commands that effect
-other container) then `PebbleHandler` should be used.
+service (perhaps it's just an environment for executing commands that affect
+other containers) then `PebbleHandler` should be used.
 
 .. code:: python
 
@@ -37,7 +37,7 @@ available.
                 sunbeam_chandlers.ContainerDir(
                     '/var/log/my-service',
                     'root',
-                    'root'),
+                    'root')]
 
 In addition to directories the handler can list configuration files which need
 to be rendered into the container. These will be rendered as templates using
@@ -97,7 +97,7 @@ with the event can be overridden.
 
      def _on_service_pebble_ready(
         self, event: ops.charm.PebbleReadyEvent
-    ) -> None:
+     ) -> None:
         """Handle pebble ready event."""
         container = event.workload
         container.add_layer(self.service_name, self.get_layer(), combine=True)
@@ -128,4 +128,3 @@ The charms `get_pebble_handlers` method dictates which pebble handlers are used.
                     self.configure_charm,
                 )
             ]
-

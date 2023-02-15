@@ -12,7 +12,6 @@ collecting the application name to construct the context.
 
 .. code:: python
 
-
     class CinderCephConfigurationContext(ConfigContext):
         """Cinder Ceph configuration context."""
 

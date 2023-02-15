@@ -47,7 +47,7 @@ Charmed Kubernetes
 ++++++++++++++++++
 
 For a Charmed Kubernetes deployment on bare metal MetalLB can also be
-use for creation of LoadBalancer access to services.
+used for creation of LoadBalancer access to services.
 
 `Operator Charms for MetalLB`_ exist but don't yet support BGP mode for
 ECMP (Equal Cost Multi Path) based load balancing by integrating directly
@@ -94,7 +94,7 @@ Service Access
 ++++++++++++++
 
 Once MetalLB has created a LoadBalancer configuration for a service its
-external IP address will be populated in the service entry.  Juju will
+external IP address will be populated in the service entry. Juju will
 automatically pick this address for use as the ingress address for the
 service on relations (which is not ideal for service communication
 within the Kubernetes deployment)

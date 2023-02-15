@@ -11,10 +11,9 @@ for the requires side.
 
 In this database interface the database charm expects the client to provide the name
 of the database(s) to be created. To model this the relation handler will require
-the charm to specify the database name(s) when the class is instantiated
+the charm to specify the database name(s) when the class is instantiated.
 
 .. code:: python
-
 
     class DBHandler(RelationHandler):
         """Handler for DB relations."""
@@ -51,9 +50,9 @@ an observer for relation changed events.
         self.framework.observe(db_relation_event, self._on_database_changed)
         return db
 
-The method runs when the changed event is seen checks whether all required data
-has been provided. If it is then it calls back to the charm, if not then no
-action is taken.
+The method runs when the changed event is seen and checks whether all required
+data has been provided. If it is then it calls back to the charm, if not then
+no action is taken.
 
 .. code:: python
 
@@ -138,5 +137,3 @@ see a handler already exists for database and not add the default one.
                 handlers.append(self.db)
             handlers = super().get_relation_handlers(handlers)
             return handlers
-
-

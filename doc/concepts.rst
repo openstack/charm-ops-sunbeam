@@ -10,7 +10,7 @@ Sunbeam OpenStack is designed to help with writing charms that use the
 deployed on Kubernetes. For the rest of this document when a charm is referred
 to it is implied that it is a Charmed Operator framework charm on Kubernetes.
 
-It general a charm interacts with relations, renders configuration files and
+In general a charm interacts with relations, renders configuration files and
 manages services. Sunbeam Ops gives a charm a consistent way of doing this by
 implementing Container handlers and Relation handlers.
 
@@ -28,7 +28,7 @@ and any additional derived settings.
 The relation handlers also setup event observers allowing them execute any
 common procedures when events are raised by the interface. When the charm
 initialises the interface it provides a callback function. The handler method
-set be the observer first processes the event and then calls the charms
+set by the observer first processes the event and then calls the charms
 callback method passing the event as an argument.
 
 Required Side Relation Handlers
@@ -58,7 +58,7 @@ Apache.
 The Container handler manages writing configuration files to the container
 and restarting services. The charm can also query the handler to find the
 state of the container, configuration within the container and the status
-of services within the container.a
+of services within the container.
 
 When a Container handler is initialised the charm passes it a list of 
 `ContainerConfigFile`. These objects instruct the handler which containers
@@ -95,7 +95,7 @@ a third setting which is needed in a configuration file.
 Interfaces
 ----------
 
-An interface should live directly in a charm and be share via `charmcraft`
+An interface should live directly in a charm and be shared via `charmcraft`
 the only exception to this is the peer relation. ASO provides a base peer
 interface and peer interface handler. This exposes methods which allow the lead
 unit of an application to share data with its peers. It also allows a leader to
@@ -105,7 +105,7 @@ Templating
 ----------
 
 Currently templates should be placed in `src/templates/`. If the charm is an
-OpenStack charm the template file can be places in the subdirectory relating to
+OpenStack charm the template file can be placed in the subdirectory relating to
 the relevant OpenStack release and the correct template will be selected.
 
 Charms
