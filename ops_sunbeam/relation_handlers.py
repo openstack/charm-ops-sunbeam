@@ -198,8 +198,10 @@ class IngressHandler(RelationHandler):
     @property
     def ready(self) -> bool:
         """Whether the handler is ready for use."""
-        # Nothing to wait for
-        if self.interface.url:
+        # Call self.interface._get_url_from_relation_data rather than
+        # self.interface.url due to bug:
+        # https://github.com/canonical/traefik-k8s-operator/issues/140
+        if self.interface._get_url_from_relation_data():
             return True
 
         return False
@@ -210,7 +212,9 @@ class IngressHandler(RelationHandler):
         if not self.ready:
             return None
 
-        return self.interface.url
+        # Call self.interface._get_url_from_relation_data rather than
+        # self.interface.url due to bug:
+        return self.interface._get_url_from_relation_data()
 
     def context(self) -> dict:
         """Context containing ingress data."""
