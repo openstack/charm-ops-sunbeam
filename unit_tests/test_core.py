@@ -249,29 +249,29 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
             rel_id, "my-service/1", {"today": "monday"}
         )
         self.assertEqual(
-            self.harness.charm.peers.interface.get_all_unit_values(
+            self.harness.charm.peers.get_all_unit_values(
                 "today",
                 include_local_unit=False,
             ),
             ["monday"],
         )
         self.assertEqual(
-            self.harness.charm.peers.interface.get_all_unit_values(
+            self.harness.charm.peers.get_all_unit_values(
                 "today",
                 include_local_unit=True,
             ),
             ["monday"],
         )
-        self.harness.charm.peers.interface.set_unit_data({"today": "friday"})
+        self.harness.charm.peers.set_unit_data({"today": "friday"})
         self.assertEqual(
-            self.harness.charm.peers.interface.get_all_unit_values(
+            self.harness.charm.peers.get_all_unit_values(
                 "today",
                 include_local_unit=False,
             ),
             ["monday"],
         )
         self.assertEqual(
-            self.harness.charm.peers.interface.get_all_unit_values(
+            self.harness.charm.peers.get_all_unit_values(
                 "today",
                 include_local_unit=True,
             ),

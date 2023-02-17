@@ -18,6 +18,7 @@ import json
 import logging
 from typing import (
     Callable,
+    Dict,
     List,
     Optional,
     Tuple,
@@ -580,6 +581,21 @@ class BasePeerHandler(RelationHandler):
             return False
         else:
             return json.loads(ready)
+
+    def set_unit_data(self, settings: Dict[str, str]) -> None:
+        """Publish settings on the peer unit data bag."""
+        self.interface.set_unit_data(settings)
+
+    def get_all_unit_values(
+        self, key: str, include_local_unit: bool = False
+    ) -> List[str]:
+        """Retrieve value for key from all related units.
+
+        :param include_local_unit: Include value set by local unit
+        """
+        return self.interface.get_all_unit_values(
+            key, include_local_unit=include_local_unit
+        )
 
 
 class CephClientHandler(RelationHandler):
