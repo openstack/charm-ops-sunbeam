@@ -125,8 +125,13 @@ class OperatorPeers(Object):
         """Return all the app data from the relation."""
         return self._app_data_bag
 
-    def get_all_unit_values(self, key: str) -> List[str]:
-        """Retrieve value for key from all related units."""
+    def get_all_unit_values(
+        self, key: str, include_local_unit: bool = False
+    ) -> List[str]:
+        """Retrieve value for key from all related units.
+
+        :param include_local_unit: Include value set by local unit
+        """
         values = []
         if not self.peers_rel:
             return values
@@ -134,6 +139,9 @@ class OperatorPeers(Object):
             value = self.peers_rel.data[unit].get(key)
             if value is not None:
                 values.append(value)
+        local_unit_value = self.peers_rel.data[self.model.unit].get(key)
+        if include_local_unit and local_unit_value:
+            values.append(local_unit_value)
         return values
 
     def set_unit_data(self, settings: Dict[str, str]) -> None:
