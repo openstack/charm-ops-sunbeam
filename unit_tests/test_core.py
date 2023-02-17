@@ -241,6 +241,43 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
         self.assertEqual(self.harness.charm.leader_get("foo"), "bar")
         self.assertEqual(self.harness.charm.leader_get("ginger"), "biscuit")
 
+    def test_peer_unit_data(self) -> None:
+        """Test interacting with peer app db."""
+        rel_id = self.harness.add_relation("peers", "my-service")
+        self.harness.add_relation_unit(rel_id, "my-service/1")
+        self.harness.update_relation_data(
+            rel_id, "my-service/1", {"today": "monday"}
+        )
+        self.assertEqual(
+            self.harness.charm.peers.interface.get_all_unit_values(
+                "today",
+                include_local_unit=False,
+            ),
+            ["monday"],
+        )
+        self.assertEqual(
+            self.harness.charm.peers.interface.get_all_unit_values(
+                "today",
+                include_local_unit=True,
+            ),
+            ["monday"],
+        )
+        self.harness.charm.peers.interface.set_unit_data({"today": "friday"})
+        self.assertEqual(
+            self.harness.charm.peers.interface.get_all_unit_values(
+                "today",
+                include_local_unit=False,
+            ),
+            ["monday"],
+        )
+        self.assertEqual(
+            self.harness.charm.peers.interface.get_all_unit_values(
+                "today",
+                include_local_unit=True,
+            ),
+            ["monday", "friday"],
+        )
+
     def test_peer_leader_ready(self) -> None:
         """Test peer leader ready methods."""
         rel_id = self.harness.add_relation("peers", "my-service")
