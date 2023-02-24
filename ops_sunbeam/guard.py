@@ -24,6 +24,8 @@ from ops.charm import (
 )
 from ops.model import (
     BlockedStatus,
+    MaintenanceStatus,
+    WaitingStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -35,8 +37,28 @@ class GuardExceptionError(Exception):
     pass
 
 
-class BlockedExceptionError(Exception):
+class BaseStatusExceptionError(Exception):
     """Charm is blocked."""
+
+    def __init__(self, msg):
+        self.msg = msg
+        super().__init__(self.msg)
+
+
+class BlockedExceptionError(BaseStatusExceptionError):
+    """Charm is blocked."""
+
+    pass
+
+
+class MaintenanceExceptionError(BaseStatusExceptionError):
+    """Charm is performing maintenance."""
+
+    pass
+
+
+class WaitingExceptionError(BaseStatusExceptionError):
+    """Charm is waiting."""
 
     pass
 
@@ -79,6 +101,18 @@ def guard(
             "Charm is blocked in section '%s' due to '%s'", section, str(e)
         )
         charm.status.set(BlockedStatus(e.msg))
+    except WaitingExceptionError as e:
+        logger.warning(
+            "Charm is waiting in section '%s' due to '%s'", section, str(e)
+        )
+        charm.status.set(WaitingStatus(e.msg))
+    except MaintenanceExceptionError as e:
+        logger.warning(
+            "Charm performing maintenance in section '%s' due to '%s'",
+            section,
+            str(e),
+        )
+        charm.status.set(MaintenanceStatus(e.msg))
     except Exception as e:
         # something else went wrong
         if handle_exception:
