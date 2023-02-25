@@ -6,3 +6,4 @@ python-keystoneclient
 git+https://github.com/openstack/charm-ops-interface-ceph-client#egg=interface_ceph_client
 lightkube
 lightkube-models
+tenacity

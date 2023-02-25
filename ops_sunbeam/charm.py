@@ -42,6 +42,7 @@ import ops.framework
 import ops.model
 import ops.pebble
 import ops.storage
+import tenacity
 from lightkube import (
     Client,
 )
@@ -411,6 +412,22 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """Name of Containerto run db sync from."""
         return self.service_name
 
+    @tenacity.retry(
+        stop=tenacity.stop_after_attempt(3),
+        retry=tenacity.retry_if_exception_type(ops.pebble.ChangeError),
+        after=tenacity.after_log(logger, logging.WARNING),
+        wait=tenacity.wait_exponential(multiplier=1, min=10, max=300),
+    )
+    def _retry_db_sync(self, cmd):
+        container = self.unit.get_container(self.db_sync_container_name)
+        logging.debug("Running sync: \n%s", cmd)
+        process = container.exec(cmd, timeout=5 * 60)
+        out, warnings = process.wait_output()
+        if warnings:
+            for line in warnings.splitlines():
+                logger.warning("DB Sync Out: %s", line.strip())
+        logging.debug("Output from database sync: \n%s", out)
+
     def run_db_sync(self) -> None:
         """Run DB sync to init DB.
 
@@ -422,17 +439,13 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         try:
             if self.db_sync_cmds:
                 logger.info("Syncing database...")
-                container = self.unit.get_container(
-                    self.db_sync_container_name
-                )
                 for cmd in self.db_sync_cmds:
-                    logging.debug("Running sync: \n%s", cmd)
-                    process = container.exec(cmd, timeout=5 * 60)
-                    out, warnings = process.wait_output()
-                    if warnings:
-                        for line in warnings.splitlines():
-                            logger.warning("DB Sync Out: %s", line.strip())
-                    logging.debug("Output from database sync: \n%s", out)
+                    try:
+                        self._retry_db_sync(cmd)
+                    except tenacity.RetryError:
+                        raise sunbeam_guard.BlockedExceptionError(
+                            "DB sync failed"
+                        )
         except AttributeError:
             logger.warning(
                 "Not DB sync ran. Charm does not specify self.db_sync_cmds"
