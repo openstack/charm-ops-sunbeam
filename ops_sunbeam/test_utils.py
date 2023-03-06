@@ -358,6 +358,9 @@ def add_identity_service_relation_response(
     harness: Harness, rel_id: str
 ) -> None:
     """Add id service data to identity-service relation."""
+    credentials_content = {"username": "svcuser1", "password": "svcpass1"}
+    credentials_id = harness.add_model_secret("keystone", credentials_content)
+    harness.grant_secret(credentials_id, "my-service")
     harness.update_relation_data(
         rel_id,
         "keystone",
@@ -375,12 +378,13 @@ def add_identity_service_relation_response(
             "service-domain": "servicedom",
             "service-domain_id": "svcdomid1",
             "service-host": "keystone.service",
-            "service-password": "svcpass1",
+            # "service-password": "svcpass1",
             "service-port": "5000",
             "service-protocol": "http",
             "service-project": "svcproj1",
             "service-project-id": "svcprojid1",
-            "service-user-name": "svcuser1",
+            # "service-user-name": "svcuser1",
+            "service-credentials": credentials_id,
         },
     )
 

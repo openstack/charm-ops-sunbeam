@@ -26,7 +26,7 @@ Two events are also available to respond to:
 A basic example showing the usage of this relation follows:
 
 ```
-from charms.sunbeam_keystone_operator.v0.identity_service import IdentityServiceRequires
+from charms.keystone_k8s.v1.identity_service import IdentityServiceRequires
 
 class IdentityServiceClientCharm(CharmBase):
     def __init__(self, *args):
@@ -85,7 +85,10 @@ from ops.framework import (
     EventSource,
     Object,
 )
-from ops.model import Relation
+from ops.model import (
+    Relation,
+    SecretNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +96,11 @@ logger = logging.getLogger(__name__)
 LIBID = "0fa7fe7236c14c6e9624acf232b9a3b0"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 0
 
 
 logger = logging.getLogger(__name__)
@@ -175,7 +178,7 @@ class IdentityServiceRequires(Object):
         try:
             self.service_password
             self.on.ready.emit()
-        except AttributeError:
+        except (AttributeError, KeyError):
             pass
 
     def _on_identity_service_relation_broken(self, event):
@@ -274,9 +277,23 @@ class IdentityServiceRequires(Object):
         return self.get_remote_app_data('service-host')
 
     @property
+    def service_credentials(self) -> str:
+        """Return the service_credentials secret."""
+        return self.get_remote_app_data('service-credentials')
+
+    @property
     def service_password(self) -> str:
         """Return the service_password."""
-        return self.get_remote_app_data('service-password')
+        credentials_id = self.get_remote_app_data('service-credentials')
+        if not credentials_id:
+            return None
+
+        try:
+            credentials = self.charm.model.get_secret(id=credentials_id)
+            return credentials.get_content().get("password")
+        except SecretNotFoundError:
+            logger.warning(f"Secret {credentials_id} not found")
+            return None
 
     @property
     def service_port(self) -> str:
@@ -301,7 +318,16 @@ class IdentityServiceRequires(Object):
     @property
     def service_user_name(self) -> str:
         """Return the service_user_name."""
-        return self.get_remote_app_data('service-user-name')
+        credentials_id = self.get_remote_app_data('service-credentials')
+        if not credentials_id:
+            return None
+
+        try:
+            credentials = self.charm.model.get_secret(id=credentials_id)
+            return credentials.get_content().get("username")
+        except SecretNotFoundError:
+            logger.warning(f"Secret {credentials_id} not found")
+            return None
 
     @property
     def service_user_id(self) -> str:
@@ -450,12 +476,12 @@ class IdentityServiceProvides(Object):
                                          admin_project: str,
                                          admin_user: str,
                                          service_domain: str,
-                                         service_password: str,
                                          service_project: str,
                                          service_user: str,
                                          internal_auth_url: str,
                                          admin_auth_url: str,
-                                         public_auth_url: str):
+                                         public_auth_url: str,
+                                         service_credentials: str):
         logging.debug("Setting identity_service connection information.")
         _identity_service_rel = None
         for relation in self.framework.model.relations[relation_name]:
@@ -485,9 +511,8 @@ class IdentityServiceProvides(Object):
         app_data["service-domain-id"] = service_domain.id
         app_data["service-project-name"] = service_project.name
         app_data["service-project-id"] = service_project.id
-        app_data["service-user-name"] = service_user.name
         app_data["service-user-id"] = service_user.id
-        app_data["service-password"] = service_password
         app_data["internal-auth-url"] = internal_auth_url
         app_data["admin-auth-url"] = admin_auth_url
         app_data["public-auth-url"] = public_auth_url
+        app_data["service-credentials"] = service_credentials
