@@ -402,6 +402,9 @@ def add_cloud_credentials_relation_response(
     harness: Harness, rel_id: str
 ) -> None:
     """Add id service data to identity-service relation."""
+    credentials_content = {"username": "username", "password": "user-password"}
+    credentials_id = harness.add_model_secret("keystone", credentials_content)
+    harness.grant_secret(credentials_id, harness.charm.app.name)
     harness.update_relation_data(
         rel_id,
         "keystone",
@@ -413,8 +416,7 @@ def add_cloud_credentials_relation_response(
             "internal-host": "keystone.internal",
             "internal-port": "5000",
             "internal-protocol": "http",
-            "username": "username",
-            "password": "user-password",
+            "credentials": credentials_id,
             "project-name": "user-project",
             "project-id": "uproj-id",
             "user-domain-name": "udomain-name",
