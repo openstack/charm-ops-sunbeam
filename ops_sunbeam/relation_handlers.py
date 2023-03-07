@@ -807,10 +807,19 @@ class TlsCertificatesHandler(RelationHandler):
             event.defer()
             return
 
+        if "private_key" in peer_relation.data[self.charm.model.unit]:
+            # Secret already saved in peer_relation
+            return
+
         private_key = generate_private_key()
+        private_key_secret = self.model.app.add_secret(
+            {"private-key": private_key.decode()},
+            label=f"{self.charm.model.unit}-private-key",
+        )
+
         peer_relation.data[self.charm.model.unit].update(
             {
-                "private_key": private_key.decode(),
+                "private_key": private_key_secret.id,
             }
         )
 
@@ -828,9 +837,16 @@ class TlsCertificatesHandler(RelationHandler):
             event.defer()
             return
 
-        private_key = peer_relation.data[self.charm.model.unit].get(
+        private_key = None
+        private_key_secret_id = peer_relation.data[self.charm.model.unit].get(
             "private_key"
         )
+        if private_key_secret_id:
+            private_key_secret = self.model.get_secret(
+                id=private_key_secret_id
+            )
+            private_key = private_key_secret.get_content().get("private-key")
+
         csr = generate_csr(
             private_key=private_key.encode(),
             subject=self.charm.model.unit.name.replace("/", "-"),
@@ -916,9 +932,15 @@ class TlsCertificatesHandler(RelationHandler):
         ca_cert = certs["ca"] + "\n" + "\n".join(certs["chain"])
 
         peer_relation = self.model.get_relation("peers")
-        key = peer_relation.data[self.charm.model.unit].get(
-            "private_key", None
+        key = None
+        private_key_secret_id = peer_relation.data[self.charm.model.unit].get(
+            "private_key"
         )
+        if private_key_secret_id:
+            private_key_secret = self.model.get_secret(
+                id=private_key_secret_id
+            )
+            key = private_key_secret.get_content().get("private-key")
 
         ctxt = {
             "key": key,
