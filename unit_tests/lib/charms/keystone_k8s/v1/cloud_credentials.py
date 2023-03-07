@@ -84,17 +84,20 @@ from ops.framework import (
     EventSource,
     Object,
 )
-from ops.model import Relation
+from ops.model import (
+    Relation,
+    SecretNotFoundError,
+)
 
 # The unique Charmhub library identifier, never change it
 LIBID = "a5d96cc2686c47eea554ce2210c2d24e"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 0
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +168,7 @@ class CloudCredentialsRequires(Object):
         logging.debug("CloudCredentials on_changed")
         try:
             self.on.ready.emit()
-        except AttributeError:
+        except (AttributeError, KeyError):
             logger.exception('Error when emitting event')
 
     def _on_cloud_credentials_relation_broken(self, event):
@@ -219,14 +222,34 @@ class CloudCredentialsRequires(Object):
         return self.get_remote_app_data('internal-protocol')
 
     @property
+    def credentials(self) -> str:
+        return self.get_remote_app_data('credentials')
+
+    @property
     def username(self) -> str:
-        """Return the username."""
-        return self.get_remote_app_data('username')
+        credentials_id = self.get_remote_app_data('credentials')
+        if not credentials_id:
+            return None
+
+        try:
+            credentials = self.charm.model.get_secret(id=credentials_id)
+            return credentials.get_content().get("username")
+        except SecretNotFoundError:
+            logger.warning(f"Secret {credentials_id} not found")
+            return None
 
     @property
     def password(self) -> str:
-        """Return the password."""
-        return self.get_remote_app_data('password')
+        credentials_id = self.get_remote_app_data('credentials')
+        if not credentials_id:
+            return None
+
+        try:
+            credentials = self.charm.model.get_secret(id=credentials_id)
+            return credentials.get_content().get("password")
+        except SecretNotFoundError:
+            logger.warning(f"Secret {credentials_id} not found")
+            return None
 
     @property
     def project_name(self) -> str:
@@ -382,8 +405,7 @@ class CloudCredentialsProvides(Object):
                               internal_host: str,
                               internal_port: str,
                               internal_protocol: str,
-                              username: str,
-                              password: str,
+                              credentials: str,
                               project_name: str,
                               project_id: str,
                               user_domain_name: str,
@@ -407,8 +429,7 @@ class CloudCredentialsProvides(Object):
         app_data["internal-host"] = internal_host
         app_data["internal-port"] = str(internal_port)
         app_data["internal-protocol"] = internal_protocol
-        app_data["username"] = username
-        app_data["password"] = password
+        app_data["credentials"] = credentials
         app_data["project-name"] = project_name
         app_data["project-id"] = project_id
         app_data["user-domain-name"] = user_domain_name
