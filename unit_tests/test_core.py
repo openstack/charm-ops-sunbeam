@@ -136,7 +136,7 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
         self.set_pebble_ready()
         self.harness.charm.leader_set({"foo": "bar"})
         test_utils.add_api_relations(self.harness)
-        test_utils.add_complete_cloud_credentials_relation(self.harness)
+        test_utils.add_complete_identity_credentials_relation(self.harness)
         expect_entries = [
             "/bin/wsgi_admin",
             "hardpassword",
@@ -170,7 +170,7 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
         test_utils.add_complete_peer_relation(self.harness)
         self.harness.charm.leader_set({"foo": "bar"})
         test_utils.add_api_relations(self.harness)
-        test_utils.add_complete_cloud_credentials_relation(self.harness)
+        test_utils.add_complete_identity_credentials_relation(self.harness)
         self.harness.set_can_connect("my-service", True)
         self.assertNotEqual(
             self.harness.charm.status.status, ops.model.ActiveStatus()
@@ -191,7 +191,7 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
         self.set_pebble_ready()
         self.harness.charm.leader_set({"foo": "bar"})
         test_utils.add_api_relations(self.harness)
-        test_utils.add_complete_cloud_credentials_relation(self.harness)
+        test_utils.add_complete_identity_credentials_relation(self.harness)
         self.harness.set_can_connect("my-service", True)
         self.assertEqual(
             self.container_calls.started_services("my-service"),
@@ -384,7 +384,7 @@ class TestOSBaseOperatorMultiSVCAPICharm(_TestOSBaseOperatorAPICharm):
         self.set_pebble_ready()
         self.harness.charm.leader_set({"foo": "bar"})
         test_utils.add_api_relations(self.harness)
-        test_utils.add_complete_cloud_credentials_relation(self.harness)
+        test_utils.add_complete_identity_credentials_relation(self.harness)
         self.harness.set_can_connect("my-service", True)
         self.assertEqual(
             sorted(self.container_calls.started_services("my-service")),

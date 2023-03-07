@@ -1,13 +1,13 @@
-"""CloudCredentialsProvides and Requires module.
+"""IdentityCredentialsProvides and Requires module.
 
 
 This library contains the Requires and Provides classes for handling
-the cloud_credentials interface.
+the identity_credentials interface.
 
-Import `CloudCredentialsRequires` in your charm, with the charm object and the
+Import `IdentityCredentialsRequires` in your charm, with the charm object and the
 relation name:
     - self
-    - "cloud_credentials"
+    - "identity_credentials"
 
 Also provide additional parameters to the charm object:
     - service
@@ -26,14 +26,14 @@ Two events are also available to respond to:
 A basic example showing the usage of this relation follows:
 
 ```
-from charms.keystone_k8s.v0.cloud_credentials import CloudCredentialsRequires
+from charms.keystone_k8s.v0.identity_credentials import IdentityCredentialsRequires
 
-class CloudCredentialsClientCharm(CharmBase):
+class IdentityCredentialsClientCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
-        # CloudCredentials Requires
-        self.cloud_credentials = CloudCredentialsRequires(
-            self, "cloud_credentials",
+        # IdentityCredentials Requires
+        self.identity_credentials = IdentityCredentialsRequires(
+            self, "identity_credentials",
             service = "my-service"
             internal_url = "http://internal-url"
             public_url = "http://public-url"
@@ -41,36 +41,36 @@ class CloudCredentialsClientCharm(CharmBase):
             region = "region"
         )
         self.framework.observe(
-            self.cloud_credentials.on.connected, self._on_cloud_credentials_connected)
+            self.identity_credentials.on.connected, self._on_identity_credentials_connected)
         self.framework.observe(
-            self.cloud_credentials.on.ready, self._on_cloud_credentials_ready)
+            self.identity_credentials.on.ready, self._on_identity_credentials_ready)
         self.framework.observe(
-            self.cloud_credentials.on.goneaway, self._on_cloud_credentials_goneaway)
+            self.identity_credentials.on.goneaway, self._on_identity_credentials_goneaway)
 
-    def _on_cloud_credentials_connected(self, event):
-        '''React to the CloudCredentials connected event.
+    def _on_identity_credentials_connected(self, event):
+        '''React to the IdentityCredentials connected event.
 
-        This event happens when n CloudCredentials relation is added to the
+        This event happens when IdentityCredentials relation is added to the
         model before credentials etc have been provided.
         '''
         # Do something before the relation is complete
         pass
 
-    def _on_cloud_credentials_ready(self, event):
-        '''React to the CloudCredentials ready event.
+    def _on_identity_credentials_ready(self, event):
+        '''React to the IdentityCredentials ready event.
 
-        The CloudCredentials interface will use the provided config for the
+        The IdentityCredentials interface will use the provided config for the
         request to the identity server.
         '''
-        # CloudCredentials Relation is ready. Do something with the completed relation.
+        # IdentityCredentials Relation is ready. Do something with the completed relation.
         pass
 
-    def _on_cloud_credentials_goneaway(self, event):
-        '''React to the CloudCredentials goneaway event.
+    def _on_identity_credentials_goneaway(self, event):
+        '''React to the IdentityCredentials goneaway event.
 
-        This event happens when an CloudCredentials relation is removed.
+        This event happens when an IdentityCredentials relation is removed.
         '''
-        # CloudCredentials Relation has goneaway. shutdown services or suchlike
+        # IdentityCredentials Relation has goneaway. shutdown services or suchlike
         pass
 ```
 """
@@ -90,50 +90,50 @@ from ops.model import (
 )
 
 # The unique Charmhub library identifier, never change it
-LIBID = "a5d96cc2686c47eea554ce2210c2d24e"
+LIBID = "b5fa18d4427c4ab9a269c3a2fbed545c"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 1
+LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 
 
-class CloudCredentialsConnectedEvent(EventBase):
-    """CloudCredentials connected Event."""
+class IdentityCredentialsConnectedEvent(EventBase):
+    """IdentityCredentials connected Event."""
 
     pass
 
 
-class CloudCredentialsReadyEvent(EventBase):
-    """CloudCredentials ready for use Event."""
+class IdentityCredentialsReadyEvent(EventBase):
+    """IdentityCredentials ready for use Event."""
 
     pass
 
 
-class CloudCredentialsGoneAwayEvent(EventBase):
-    """CloudCredentials relation has gone-away Event"""
+class IdentityCredentialsGoneAwayEvent(EventBase):
+    """IdentityCredentials relation has gone-away Event"""
 
     pass
 
 
-class CloudCredentialsServerEvents(ObjectEvents):
+class IdentityCredentialsServerEvents(ObjectEvents):
     """Events class for `on`"""
 
-    connected = EventSource(CloudCredentialsConnectedEvent)
-    ready = EventSource(CloudCredentialsReadyEvent)
-    goneaway = EventSource(CloudCredentialsGoneAwayEvent)
+    connected = EventSource(IdentityCredentialsConnectedEvent)
+    ready = EventSource(IdentityCredentialsReadyEvent)
+    goneaway = EventSource(IdentityCredentialsGoneAwayEvent)
 
 
-class CloudCredentialsRequires(Object):
+class IdentityCredentialsRequires(Object):
     """
-    CloudCredentialsRequires class
+    IdentityCredentialsRequires class
     """
 
-    on = CloudCredentialsServerEvents()
+    on = IdentityCredentialsServerEvents()
     _stored = StoredState()
 
     def __init__(self, charm, relation_name: str):
@@ -142,48 +142,48 @@ class CloudCredentialsRequires(Object):
         self.relation_name = relation_name
         self.framework.observe(
             self.charm.on[relation_name].relation_joined,
-            self._on_cloud_credentials_relation_joined,
+            self._on_identity_credentials_relation_joined,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_changed,
-            self._on_cloud_credentials_relation_changed,
+            self._on_identity_credentials_relation_changed,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_departed,
-            self._on_cloud_credentials_relation_changed,
+            self._on_identity_credentials_relation_changed,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_broken,
-            self._on_cloud_credentials_relation_broken,
+            self._on_identity_credentials_relation_broken,
         )
 
-    def _on_cloud_credentials_relation_joined(self, event):
-        """CloudCredentials relation joined."""
-        logging.debug("CloudCredentials on_joined")
+    def _on_identity_credentials_relation_joined(self, event):
+        """IdentityCredentials relation joined."""
+        logging.debug("IdentityCredentials on_joined")
         self.on.connected.emit()
         self.request_credentials()
 
-    def _on_cloud_credentials_relation_changed(self, event):
-        """CloudCredentials relation changed."""
-        logging.debug("CloudCredentials on_changed")
+    def _on_identity_credentials_relation_changed(self, event):
+        """IdentityCredentials relation changed."""
+        logging.debug("IdentityCredentials on_changed")
         try:
             self.on.ready.emit()
         except (AttributeError, KeyError):
             logger.exception('Error when emitting event')
 
-    def _on_cloud_credentials_relation_broken(self, event):
-        """CloudCredentials relation broken."""
-        logging.debug("CloudCredentials on_broken")
+    def _on_identity_credentials_relation_broken(self, event):
+        """IdentityCredentials relation broken."""
+        logging.debug("IdentityCredentials on_broken")
         self.on.goneaway.emit()
 
     @property
-    def _cloud_credentials_rel(self) -> Relation:
-        """The CloudCredentials relation."""
+    def _identity_credentials_rel(self) -> Relation:
+        """The IdentityCredentials relation."""
         return self.framework.model.get_relation(self.relation_name)
 
     def get_remote_app_data(self, key: str) -> str:
         """Return the value for the given key from remote app data."""
-        data = self._cloud_credentials_rel.data[self._cloud_credentials_rel.app]
+        data = self._identity_credentials_rel.data[self._identity_credentials_rel.app]
         return data.get(key)
 
     @property
@@ -287,21 +287,21 @@ class CloudCredentialsRequires(Object):
         return self.get_remote_app_data('region')
 
     def request_credentials(self) -> None:
-        """Request credentials from the CloudCredentials server."""
+        """Request credentials from the IdentityCredentials server."""
         if self.model.unit.is_leader():
             logging.debug(f'Requesting credentials for {self.charm.app.name}')
-            app_data = self._cloud_credentials_rel.data[self.charm.app]
+            app_data = self._identity_credentials_rel.data[self.charm.app]
             app_data['username'] = self.charm.app.name
 
 
-class HasCloudCredentialsClientsEvent(EventBase):
-    """Has CloudCredentialsClients Event."""
+class HasIdentityCredentialsClientsEvent(EventBase):
+    """Has IdentityCredentialsClients Event."""
 
     pass
 
 
-class ReadyCloudCredentialsClientsEvent(EventBase):
-    """CloudCredentialsClients Ready Event."""
+class ReadyIdentityCredentialsClientsEvent(EventBase):
+    """IdentityCredentialsClients Ready Event."""
 
     def __init__(self, handle, relation_id, relation_name, username):
         super().__init__(handle)
@@ -323,32 +323,32 @@ class ReadyCloudCredentialsClientsEvent(EventBase):
         self.username = snapshot["username"]
 
 
-class CloudCredentialsClientsGoneAwayEvent(EventBase):
-    """Has CloudCredentialsClientsGoneAwayEvent Event."""
+class IdentityCredentialsClientsGoneAwayEvent(EventBase):
+    """Has IdentityCredentialsClientsGoneAwayEvent Event."""
 
     pass
 
 
-class CloudCredentialsClientEvents(ObjectEvents):
+class IdentityCredentialsClientEvents(ObjectEvents):
     """Events class for `on`"""
 
-    has_cloud_credentials_clients = EventSource(
-        HasCloudCredentialsClientsEvent
+    has_identity_credentials_clients = EventSource(
+        HasIdentityCredentialsClientsEvent
     )
-    ready_cloud_credentials_clients = EventSource(
-        ReadyCloudCredentialsClientsEvent
+    ready_identity_credentials_clients = EventSource(
+        ReadyIdentityCredentialsClientsEvent
     )
-    cloud_credentials_clients_gone = EventSource(
-        CloudCredentialsClientsGoneAwayEvent
+    identity_credentials_clients_gone = EventSource(
+        IdentityCredentialsClientsGoneAwayEvent
     )
 
 
-class CloudCredentialsProvides(Object):
+class IdentityCredentialsProvides(Object):
     """
-    CloudCredentialsProvides class
+    IdentityCredentialsProvides class
     """
 
-    on = CloudCredentialsClientEvents()
+    on = IdentityCredentialsClientEvents()
     _stored = StoredState()
 
     def __init__(self, charm, relation_name):
@@ -357,25 +357,25 @@ class CloudCredentialsProvides(Object):
         self.relation_name = relation_name
         self.framework.observe(
             self.charm.on[relation_name].relation_joined,
-            self._on_cloud_credentials_relation_joined,
+            self._on_identity_credentials_relation_joined,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_changed,
-            self._on_cloud_credentials_relation_changed,
+            self._on_identity_credentials_relation_changed,
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_broken,
-            self._on_cloud_credentials_relation_broken,
+            self._on_identity_credentials_relation_broken,
         )
 
-    def _on_cloud_credentials_relation_joined(self, event):
-        """Handle CloudCredentials joined."""
-        logging.debug("CloudCredentialsProvides on_joined")
-        self.on.has_cloud_credentials_clients.emit()
+    def _on_identity_credentials_relation_joined(self, event):
+        """Handle IdentityCredentials joined."""
+        logging.debug("IdentityCredentialsProvides on_joined")
+        self.on.has_identity_credentials_clients.emit()
 
-    def _on_cloud_credentials_relation_changed(self, event):
-        """Handle CloudCredentials changed."""
-        logging.debug("CloudCredentials on_changed")
+    def _on_identity_credentials_relation_changed(self, event):
+        """Handle IdentityCredentials changed."""
+        logging.debug("IdentityCredentials on_changed")
         REQUIRED_KEYS = ['username']
 
         values = [
@@ -385,18 +385,18 @@ class CloudCredentialsProvides(Object):
         # Validate data on the relation
         if all(values):
             username = event.relation.data[event.relation.app]['username']
-            self.on.ready_cloud_credentials_clients.emit(
+            self.on.ready_identity_credentials_clients.emit(
                 event.relation.id,
                 event.relation.name,
                 username,
             )
 
-    def _on_cloud_credentials_relation_broken(self, event):
-        """Handle CloudCredentials broken."""
-        logging.debug("CloudCredentialsProvides on_departed")
-        self.on.cloud_credentials_clients_gone.emit()
+    def _on_identity_credentials_relation_broken(self, event):
+        """Handle IdentityCredentials broken."""
+        logging.debug("IdentityCredentialsProvides on_departed")
+        self.on.identity_credentials_clients_gone.emit()
 
-    def set_cloud_credentials(self, relation_name: int,
+    def set_identity_credentials(self, relation_name: int,
                               relation_id: str,
                               api_version: str,
                               auth_host: str,
@@ -413,15 +413,15 @@ class CloudCredentialsProvides(Object):
                               project_domain_name: str,
                               project_domain_id: str,
                               region: str):
-        logging.debug("Setting cloud_credentials connection information.")
-        _cloud_credentials_rel = None
+        logging.debug("Setting identity_credentials connection information.")
+        _identity_credentials_rel = None
         for relation in self.framework.model.relations[relation_name]:
             if relation.id == relation_id:
-                _cloud_credentials_rel = relation
-        if not _cloud_credentials_rel:
+                _identity_credentials_rel = relation
+        if not _identity_credentials_rel:
             # Relation has disappeared so don't send the data
             return
-        app_data = _cloud_credentials_rel.data[self.charm.app]
+        app_data = _identity_credentials_rel.data[self.charm.app]
         app_data["api-version"] = api_version
         app_data["auth-host"] = auth_host
         app_data["auth-port"] = str(auth_port)

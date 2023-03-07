@@ -171,12 +171,12 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 "certificates" in self.mandatory_relations,
             )
             handlers.append(self.certs)
-        if self.can_add_handler("cloud-credentials", handlers):
-            self.ccreds = sunbeam_rhandlers.CloudCredentialsRequiresHandler(
+        if self.can_add_handler("identity-credentials", handlers):
+            self.ccreds = sunbeam_rhandlers.IdentityCredentialsRequiresHandler(
                 self,
-                "cloud-credentials",
+                "identity-credentials",
                 self.configure_charm,
-                "cloud-credentials" in self.mandatory_relations,
+                "identity-credentials" in self.mandatory_relations,
             )
             handlers.append(self.ccreds)
         return handlers
