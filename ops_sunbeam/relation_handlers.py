@@ -812,7 +812,7 @@ class TlsCertificatesHandler(RelationHandler):
             return
 
         private_key = generate_private_key()
-        private_key_secret = self.model.app.add_secret(
+        private_key_secret = self.model.unit.add_secret(
             {"private-key": private_key.decode()},
             label=f"{self.charm.model.unit}-private-key",
         )
