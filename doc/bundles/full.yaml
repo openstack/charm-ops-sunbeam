@@ -164,7 +164,7 @@ relations:
 - - mysql:database
   - horizon:database
 - - keystone:identity-credentials
-  - horizon:cloud-credentials
+  - horizon:identity-credentials
 - - traefik:ingress
   - horizon:ingress-internal
 - - traefik-public:ingress

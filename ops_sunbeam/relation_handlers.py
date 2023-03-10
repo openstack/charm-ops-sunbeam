@@ -950,8 +950,8 @@ class TlsCertificatesHandler(RelationHandler):
         return ctxt
 
 
-class CloudCredentialsRequiresHandler(RelationHandler):
-    """Handles the cloud credentials relation on the requires side."""
+class IdentityCredentialsRequiresHandler(RelationHandler):
+    """Handles the identity credentials relation on the requires side."""
 
     def __init__(
         self,
@@ -960,9 +960,9 @@ class CloudCredentialsRequiresHandler(RelationHandler):
         callback_f: Callable,
         mandatory: bool = False,
     ) -> None:
-        """Create a new cloud-credentials handler.
+        """Create a new identity-credentials handler.
 
-        Create a new CloudCredentialsRequiresHandler that handles initial
+        Create a new IdentityCredentialsRequiresHandler that handles initial
         events from the relation and invokes the provided callbacks based on
         the event raised.
 
@@ -976,11 +976,11 @@ class CloudCredentialsRequiresHandler(RelationHandler):
         super().__init__(charm, relation_name, callback_f, mandatory)
 
     def setup_event_handler(self) -> ops.charm.Object:
-        """Configure event handlers for cloud-credentials relation."""
-        import charms.keystone_k8s.v1.cloud_credentials as cloud_credentials
+        """Configure event handlers for identity-credentials relation."""
+        import charms.keystone_k8s.v0.identity_credentials as identity_credentials
 
-        logger.debug("Setting up the cloud-credentials event handler")
-        credentials_service = cloud_credentials.CloudCredentialsRequires(
+        logger.debug("Setting up the identity-credentials event handler")
+        credentials_service = identity_credentials.IdentityCredentialsRequires(
             self.charm,
             self.relation_name,
         )

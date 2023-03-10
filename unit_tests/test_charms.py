@@ -108,7 +108,7 @@ requires:
     interface: rabbitmq
   identity-service:
     interface: keystone
-  cloud-credentials:
+  identity-credentials:
     interface: keystone-credentials
     limit: 1
 
