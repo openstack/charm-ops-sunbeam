@@ -50,6 +50,34 @@ class TestOSBaseOperatorCharm(test_utils.CharmTestCase):
         self.harness.begin()
         self.addCleanup(self.harness.cleanup)
 
+    def test_write_config(self) -> None:
+        """Test writing config when charm is ready."""
+        self.assertEqual(self.container_calls.push["my-service"], [])
+
+    def test_relation_handlers_ready(self) -> None:
+        """Test relation handlers are ready."""
+        self.assertTrue(self.harness.charm.relation_handlers_ready())
+
+
+class TestOSBaseOperatorCharmK8S(test_utils.CharmTestCase):
+    """Test for the OSBaseOperatorCharm class."""
+
+    PATCHES = []
+
+    def setUp(self) -> None:
+        """Charm test class setup."""
+        self.container_calls = test_utils.ContainerCalls()
+        super().setUp(sunbeam_charm, self.PATCHES)
+        self.harness = test_utils.get_harness(
+            test_charms.MyCharmK8S,
+            test_charms.CHARM_METADATA_K8S,
+            self.container_calls,
+            charm_config=test_charms.CHARM_CONFIG,
+            initial_charm_config=test_charms.INITIAL_CHARM_CONFIG,
+        )
+        self.harness.begin()
+        self.addCleanup(self.harness.cleanup)
+
     def set_pebble_ready(self) -> None:
         """Set pebble ready event."""
         self.harness.container_pebble_ready("my-service")

@@ -104,7 +104,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             self.bootstrap_status.set(
                 MaintenanceStatus("Service not bootstrapped")
             )
-        self.pebble_handlers = self.get_pebble_handlers()
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self.on.secret_rotate, self._on_secret_rotate)
@@ -215,46 +214,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 domain_name_sans.append(hostname)
         return domain_name_sans
 
-    def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
-        """Pebble handlers for the operator."""
-        return [
-            sunbeam_chandlers.PebbleHandler(
-                self,
-                self.service_name,
-                self.service_name,
-                self.container_configs,
-                self.template_dir,
-                self.configure_charm,
-            )
-        ]
-
-    def get_named_pebble_handler(
-        self, container_name: str
-    ) -> sunbeam_chandlers.PebbleHandler:
-        """Get pebble handler matching container_name."""
-        pebble_handlers = [
-            h
-            for h in self.pebble_handlers
-            if h.container_name == container_name
-        ]
-        assert len(pebble_handlers) < 2, (
-            "Multiple pebble handlers with the " "same name found."
-        )
-        if pebble_handlers:
-            return pebble_handlers[0]
-        else:
-            return None
-
-    def get_named_pebble_handlers(
-        self, container_names: List[str]
-    ) -> List[sunbeam_chandlers.PebbleHandler]:
-        """Get pebble handlers matching container_names."""
-        return [
-            h
-            for h in self.pebble_handlers
-            if h.container_name in container_names
-        ]
-
     def check_leader_ready(self):
         """Check the leader is reporting as ready."""
         if self.supports_peer_relation and not (
@@ -269,39 +228,10 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 "Not all relations are ready"
             )
 
-    def init_container_services(self):
-        """Run init on pebble handlers that are ready."""
-        for ph in self.pebble_handlers:
-            if ph.pebble_ready:
-                logging.debug(f"Running init for {ph.service_name}")
-                ph.init_service(self.contexts())
-            else:
-                logging.debug(
-                    f"Not running init for {ph.service_name},"
-                    " container not ready"
-                )
-                raise sunbeam_guard.WaitingExceptionError(
-                    "Payload container not ready"
-                )
-
-    def check_pebble_handlers_ready(self):
-        """Check pebble handlers are ready."""
-        for ph in self.pebble_handlers:
-            if not ph.service_ready:
-                logging.debug(
-                    f"Aborting container {ph.service_name} service not ready"
-                )
-                raise sunbeam_guard.WaitingExceptionError(
-                    "Container service not ready"
-                )
-
     def configure_unit(self, event: ops.framework.EventBase) -> None:
         """Run configuration on this unit."""
         self.check_leader_ready()
         self.check_relation_handlers_ready()
-        self.init_container_services()
-        self.check_pebble_handlers_ready()
-        self.run_db_sync()
         self._state.unit_bootstrapped = True
 
     def configure_app_leader(self, event):
@@ -324,10 +254,10 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         else:
             self.configure_app_non_leader(event)
 
-    def add_pebble_health_checks(self):
-        """Add health checks for services in payload containers."""
-        for ph in self.pebble_handlers:
-            ph.add_healthchecks()
+    def post_config_setup(self):
+        """Configuration steps after services have been setup."""
+        logger.info("Setting active status")
+        self.status.set(ActiveStatus(""))
 
     def configure_charm(self, event: ops.framework.EventBase) -> None:
         """Catchall handler to configure charm services."""
@@ -335,19 +265,12 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             self.configure_unit(event)
             self.configure_app(event)
             self.bootstrap_status.set(ActiveStatus())
-            self.add_pebble_health_checks()
-            logger.info("Setting active status")
-            self.status.set(ActiveStatus(""))
+            self.post_config_setup()
 
     @property
     def supports_peer_relation(self) -> bool:
         """Whether the charm support the peers relation."""
         return "peers" in self.meta.relations.keys()
-
-    @property
-    def container_configs(self) -> List[sunbeam_core.ContainerConfigFile]:
-        """Container configuration files for the operator."""
-        return []
 
     @property
     def config_contexts(
@@ -360,11 +283,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
     def _unused_handler_prefix(self) -> str:
         """Prefix for handlers."""
         return self.service_name.replace("-", "_")
-
-    @property
-    def container_names(self) -> List[str]:
-        """Names of Containers that form part of this service."""
-        return [self.service_name]
 
     @property
     def template_dir(self) -> str:
@@ -409,14 +327,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         # Placeholder to handle secret remove event
         # charms should handle the event if required
         pass
-
-    def containers_ready(self) -> bool:
-        """Determine whether all containers are ready for configuration."""
-        for ph in self.pebble_handlers:
-            if not ph.service_ready:
-                logger.info(f"Container incomplete: {ph.container_name}")
-                return False
-        return True
 
     def relation_handlers_ready(self) -> bool:
         """Determine whether all relations are ready for use."""
@@ -472,6 +382,119 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         """Has the lead unit announced that it is ready."""
         return self.peers.is_leader_ready()
 
+
+class OSBaseOperatorCharmK8S(OSBaseOperatorCharm):
+    """Base charm class for k8s based charms."""
+
+    def __init__(self, framework: ops.framework.Framework) -> None:
+        """Run constructor."""
+        super().__init__(framework)
+        self.pebble_handlers = self.get_pebble_handlers()
+
+    def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
+        """Pebble handlers for the operator."""
+        return [
+            sunbeam_chandlers.PebbleHandler(
+                self,
+                self.service_name,
+                self.service_name,
+                self.container_configs,
+                self.template_dir,
+                self.configure_charm,
+            )
+        ]
+
+    def get_named_pebble_handler(
+        self, container_name: str
+    ) -> sunbeam_chandlers.PebbleHandler:
+        """Get pebble handler matching container_name."""
+        pebble_handlers = [
+            h
+            for h in self.pebble_handlers
+            if h.container_name == container_name
+        ]
+        assert len(pebble_handlers) < 2, (
+            "Multiple pebble handlers with the " "same name found."
+        )
+        if pebble_handlers:
+            return pebble_handlers[0]
+        else:
+            return None
+
+    def get_named_pebble_handlers(
+        self, container_names: List[str]
+    ) -> List[sunbeam_chandlers.PebbleHandler]:
+        """Get pebble handlers matching container_names."""
+        return [
+            h
+            for h in self.pebble_handlers
+            if h.container_name in container_names
+        ]
+
+    def init_container_services(self):
+        """Run init on pebble handlers that are ready."""
+        for ph in self.pebble_handlers:
+            if ph.pebble_ready:
+                logging.debug(f"Running init for {ph.service_name}")
+                ph.init_service(self.contexts())
+            else:
+                logging.debug(
+                    f"Not running init for {ph.service_name},"
+                    " container not ready"
+                )
+                raise sunbeam_guard.WaitingExceptionError(
+                    "Payload container not ready"
+                )
+
+    def check_pebble_handlers_ready(self):
+        """Check pebble handlers are ready."""
+        for ph in self.pebble_handlers:
+            if not ph.service_ready:
+                logging.debug(
+                    f"Aborting container {ph.service_name} service not ready"
+                )
+                raise sunbeam_guard.WaitingExceptionError(
+                    "Container service not ready"
+                )
+
+    def configure_unit(self, event: ops.framework.EventBase) -> None:
+        """Run configuration on this unit."""
+        self.check_leader_ready()
+        self.check_relation_handlers_ready()
+        self.init_container_services()
+        self.check_pebble_handlers_ready()
+        self.run_db_sync()
+        self._state.unit_bootstrapped = True
+
+    def add_pebble_health_checks(self):
+        """Add health checks for services in payload containers."""
+        for ph in self.pebble_handlers:
+            ph.add_healthchecks()
+
+    def post_config_setup(self):
+        """Configuration steps after services have been setup."""
+        self.add_pebble_health_checks()
+        logger.info("Setting active status")
+        self.status.set(ActiveStatus(""))
+
+    @property
+    def container_configs(self) -> List[sunbeam_core.ContainerConfigFile]:
+        """Container configuration files for the operator."""
+        return []
+
+    @property
+    def container_names(self) -> List[str]:
+        """Names of Containers that form part of this service."""
+        return [self.service_name]
+
+    def containers_ready(self) -> bool:
+        """Determine whether all containers are ready for configuration."""
+        for ph in self.pebble_handlers:
+            if not ph.service_ready:
+                logger.info(f"Container incomplete: {ph.container_name}")
+                return False
+        return True
+
     @property
     def db_sync_container_name(self) -> str:
         """Name of Containerto run db sync from."""
@@ -518,7 +541,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             )
 
 
-class OSBaseOperatorAPICharm(OSBaseOperatorCharm):
+class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
     """Base class for OpenStack API operators."""
 
     mandatory_relations = {"database", "identity-service", "ingress-public"}

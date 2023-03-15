@@ -47,8 +47,8 @@ class TestCompoundStatus(test_utils.CharmTestCase):
         self.container_calls = test_utils.ContainerCalls()
         super().setUp(sunbeam_charm, self.PATCHES)
         self.harness = test_utils.get_harness(
-            test_charms.MyCharm,
-            test_charms.CHARM_METADATA,
+            test_charms.MyCharmK8S,
+            test_charms.CHARM_METADATA_K8S,
             self.container_calls,
             charm_config=test_charms.CHARM_CONFIG,
             initial_charm_config=test_charms.INITIAL_CHARM_CONFIG,

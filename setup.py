@@ -24,6 +24,8 @@ version = "0.0.1.dev1"
 install_require = [
     'ops',
     'tenacity',
+    'lightkube',
+    'lightkube-models',
 ]
 
 tests_require = [

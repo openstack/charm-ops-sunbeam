@@ -62,7 +62,11 @@ tags:
   - misc
 
 subordinate: false
+"""
 
+CHARM_METADATA_K8S = (
+    CHARM_METADATA
+    + """
 containers:
   my-service:
     resource: mysvc-image
@@ -80,6 +84,7 @@ resources:
   mysvc-image:
     type: oci-image
 """
+)
 
 API_CHARM_METADATA = """
 name: my-service
@@ -151,13 +156,6 @@ class MyCharm(sunbeam_charm.OSBaseOperatorCharm):
         """Log events."""
         self.seen_events.append(type(event).__name__)
 
-    def _on_service_pebble_ready(
-        self, event: "ops.framework.EventBase"
-    ) -> None:
-        """Log pebble ready event."""
-        self._log_event(event)
-        super()._on_service_pebble_ready(event)
-
     def _on_config_changed(self, event: "ops.framework.EventBase") -> None:
         """Log config changed event."""
         self._log_event(event)
@@ -197,6 +195,54 @@ TEMPLATE_CONTENTS = """
 {{ identity_service.service_password }}
 {{ peers.foo }}
 """
+
+
+class MyCharmK8S(sunbeam_charm.OSBaseOperatorCharmK8S):
+    """Test charm for k8s."""
+
+    service_name = "my-service"
+
+    def __init__(self, framework: "ops.framework.Framework") -> None:
+        """Run constructor."""
+        self.seen_events = []
+        self.render_calls = []
+        self._template_dir = self._setup_templates()
+        super().__init__(framework)
+
+    def _log_event(self, event: "ops.framework.EventBase") -> None:
+        """Log events."""
+        self.seen_events.append(type(event).__name__)
+
+    def _on_config_changed(self, event: "ops.framework.EventBase") -> None:
+        """Log config changed event."""
+        self._log_event(event)
+        super()._on_config_changed(event)
+
+    def configure_charm(self, event: "ops.framework.EventBase") -> None:
+        """Log configure_charm call."""
+        self._log_event(event)
+        super().configure_charm(event)
+
+    @property
+    def public_ingress_port(self) -> int:
+        """Charms default port."""
+        return 789
+
+    def _setup_templates(self) -> str:
+        """Run temp templates dir setup."""
+        tmpdir = tempfile.mkdtemp()
+        _template_dir = f"{tmpdir}/templates"
+        os.mkdir(_template_dir)
+        with open(f"{_template_dir}/my-service.conf.j2", "w") as f:
+            f.write("")
+        return _template_dir
+
+    def _on_service_pebble_ready(
+        self, event: "ops.framework.EventBase"
+    ) -> None:
+        """Log pebble ready event."""
+        self._log_event(event)
+        super()._on_service_pebble_ready(event)
 
 
 class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
