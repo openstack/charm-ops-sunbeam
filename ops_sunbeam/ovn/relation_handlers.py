@@ -105,6 +105,15 @@ class OVNRelationUtils:
         """
         return self._remote_addrs("bound-address")
 
+    @property
+    def cluster_remote_ingress_addrs(self) -> Iterator[str]:
+        """Retrieve remote addresses bound to remote endpoint.
+
+        :returns: addresses bound to remote endpoints.
+        :rtype: Iterator[str]
+        """
+        return self._remote_addrs("ingress-bound-address")
+
     def db_connection_strs(
         self, hostnames: List[str], port: int, proto: str = "ssl"
     ) -> Iterator[str]:
@@ -194,6 +203,28 @@ class OVNRelationUtils:
         )
 
     @property
+    def db_ingress_nb_connection_strs(self) -> Iterator[str]:
+        """Provide OVN Northbound OVSDB connection strings.
+
+        :returns: OVN Northbound OVSDB connection strings.
+        :rtpye: Iterator[str]
+        """
+        return self.db_connection_strs(
+            self.cluster_remote_ingress_addrs, self.db_nb_port
+        )
+
+    @property
+    def db_ingress_sb_connection_strs(self) -> Iterator[str]:
+        """Provide OVN Southbound OVSDB connection strings.
+
+        :returns: OVN Southbound OVSDB connection strings.
+        :rtpye: Iterator[str]
+        """
+        return self.db_connection_strs(
+            self.cluster_remote_ingress_addrs, self.db_sb_port
+        )
+
+    @property
     def db_nb_connection_hostname_strs(self) -> Iterator[str]:
         """Provide OVN Northbound OVSDB connection strings.
 
@@ -225,6 +256,24 @@ class OVNRelationUtils:
         return self._endpoint_local_bound_addr()
 
     @property
+    def cluster_ingress_addr(self) -> ipaddress.IPv4Address:
+        """Retrieve local address bound to endpoint.
+
+        :returns: IPv4 or IPv6 address bound to endpoint
+        :rtype: str
+        """
+        addresses = self._endpoint_ingress_bound_addresses()
+        if len(addresses) > 1:
+            logger.debug("Found multiple ingress addresses, picking first one")
+            address = addresses[0]
+        elif len(addresses) == 1:
+            address = addresses[0]
+        else:
+            logger.debug("Found no ingress addresses")
+            address = None
+        return address
+
+    @property
     def cluster_local_hostname(self) -> str:
         """Retrieve local hostname for unit.
 
@@ -244,6 +293,17 @@ class OVNRelationUtils:
             addr = binding.network.bind_address
             break
         return addr
+
+    def _endpoint_ingress_bound_addresses(self) -> ipaddress.IPv4Address:
+        """Retrieve local address bound to endpoint.
+
+        :returns: IPv4 or IPv6 address bound to endpoint
+        """
+        addresses = []
+        for relation in self.charm.model.relations.get(self.relation_name, []):
+            binding = self.charm.model.get_binding(relation)
+            addresses.extend(binding.network.ingress_addresses)
+        return list(set(addresses))
 
 
 class OVNDBClusterPeerHandler(
@@ -440,6 +500,7 @@ class OVSDBCMSProvidesHandler(
             {
                 "bound-hostname": str(self.cluster_local_hostname),
                 "bound-address": str(self.cluster_local_addr),
+                "ingress-bound-address": str(self.cluster_ingress_addr),
             }
         )
 
@@ -509,6 +570,8 @@ class OVSDBCMSRequiresHandler(
                 "hostnames": self.interface.bound_hostnames(),
                 "local_address": self.cluster_local_addr,
                 "addresses": self.interface.bound_addresses(),
+                "db_ingress_sb_connection_strs": self.db_ingress_sb_connection_strs,
+                "db_ingress_nb_connection_strs": self.db_ingress_nb_connection_strs,
                 "db_sb_connection_strs": ",".join(self.db_sb_connection_strs),
                 "db_nb_connection_strs": ",".join(self.db_nb_connection_strs),
                 "db_sb_connection_hostname_strs": ",".join(
