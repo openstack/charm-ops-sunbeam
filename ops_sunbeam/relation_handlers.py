@@ -977,10 +977,10 @@ class IdentityCredentialsRequiresHandler(RelationHandler):
 
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for identity-credentials relation."""
-        import charms.keystone_k8s.v0.identity_credentials as identity_credentials
+        import charms.keystone_k8s.v1.cloud_credentials as cloud_credentials
 
-        logger.debug("Setting up the identity-credentials event handler")
-        credentials_service = identity_credentials.IdentityCredentialsRequires(
+        logger.debug("Setting up the cloud-credentials event handler")
+        credentials_service = cloud_credentials.CloudCredentialsRequires(
             self.charm,
             self.relation_name,
         )
