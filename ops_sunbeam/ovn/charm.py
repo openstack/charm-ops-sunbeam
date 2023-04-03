@@ -23,7 +23,7 @@ from .. import relation_handlers as sunbeam_rhandlers
 from . import relation_handlers as ovn_relation_handlers
 
 
-class OSBaseOVNOperatorCharm(sunbeam_charm.OSBaseOperatorCharm):
+class OSBaseOVNOperatorCharm(sunbeam_charm.OSBaseOperatorCharmK8S):
     """Base charms for OpenStack operators."""
 
     def get_relation_handlers(
