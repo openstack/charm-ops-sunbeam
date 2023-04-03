@@ -759,9 +759,13 @@ class TlsCertificatesHandler(RelationHandler):
             """Check if store is ready."""
             return bool(self.relation)
 
-        def get_private_key(self) -> bool:
+        def get_private_key(self) -> str:
             """Return private key."""
-            return self.relation.data[self.unit].get("private_key")
+            try:
+                key = self.relation.data[self.unit].get("private_key")
+            except AttributeError:
+                key = None
+            return key
 
         def set_private_key(self, value: str):
             """Update private key."""
