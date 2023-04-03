@@ -376,11 +376,23 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def set_leader_ready(self) -> None:
         """Tell peers that the leader is ready."""
-        self.peers.set_leader_ready()
+        try:
+            self.peers.set_leader_ready()
+        except AttributeError:
+            logging.warning("Cannot set leader ready as peer relation missing")
 
     def is_leader_ready(self) -> bool:
         """Has the lead unit announced that it is ready."""
-        return self.peers.is_leader_ready()
+        leader_ready = False
+        try:
+            leader_ready = self.peers.is_leader_ready()
+        except AttributeError:
+            logging.warning(
+                "Cannot check leader ready as peer relation missing. "
+                "Assuming it is ready."
+            )
+            leader_ready = True
+        return leader_ready
 
 
 class OSBaseOperatorCharmK8S(OSBaseOperatorCharm):

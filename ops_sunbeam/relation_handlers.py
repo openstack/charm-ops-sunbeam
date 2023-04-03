@@ -748,6 +748,51 @@ class CephClientHandler(RelationHandler):
 class TlsCertificatesHandler(RelationHandler):
     """Handler for certificates interface."""
 
+    class PeerKeyStore:
+        """Store private key sercret id in peer storage relation."""
+
+        def __init__(self, relation, unit):
+            self.relation = relation
+            self.unit = unit
+
+        def store_ready(self) -> bool:
+            """Check if store is ready."""
+            return bool(self.relation)
+
+        def get_private_key(self) -> bool:
+            """Return private key."""
+            return self.relation.data[self.unit].get("private_key")
+
+        def set_private_key(self, value: str):
+            """Update private key."""
+            self.relation.data[self.unit]["private_key"] = value
+
+    class LocalDBKeyStore:
+        """Store private key sercret id in local unit db.
+
+        This is a fallback for when the peer relation is not
+        present.
+        """
+
+        def __init__(self, state_db):
+            self.state_db = state_db
+            try:
+                self.state_db.private_key
+            except AttributeError:
+                self.state_db.private_key = None
+
+        def store_ready(self) -> bool:
+            """Check if store is ready."""
+            return True
+
+        def get_private_key(self) -> str:
+            """Return private key."""
+            return self.state_db.private_key
+
+        def set_private_key(self, value: str):
+            """Update private key."""
+            self.state_db.private_key = value
+
     def __init__(
         self,
         charm: ops.charm.CharmBase,
@@ -759,9 +804,15 @@ class TlsCertificatesHandler(RelationHandler):
         """Run constructor."""
         self.sans = sans
         super().__init__(charm, relation_name, callback_f, mandatory)
+        try:
+            self.store = self.PeerKeyStore(
+                self.model.get_relation("peers"), self.charm.model.unit
+            )
+        except KeyError:
+            self.store = self.LocalDBKeyStore(charm._state)
 
     def setup_event_handler(self) -> None:
-        """Configure event handlers for peer relation."""
+        """Configure event handlers for tls relation."""
         logger.debug("Setting up certificates event handler")
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
@@ -802,13 +853,12 @@ class TlsCertificatesHandler(RelationHandler):
             generate_private_key,
         )
 
-        peer_relation = self.model.get_relation("peers")
-        if not peer_relation:
+        if not self.store.store_ready():
             event.defer()
             return
 
-        if "private_key" in peer_relation.data[self.charm.model.unit]:
-            # Secret already saved in peer_relation
+        if self.store.get_private_key():
+            # Secret already saved
             return
 
         private_key = generate_private_key()
@@ -817,11 +867,7 @@ class TlsCertificatesHandler(RelationHandler):
             label=f"{self.charm.model.unit}-private-key",
         )
 
-        peer_relation.data[self.charm.model.unit].update(
-            {
-                "private_key": private_key_secret.id,
-            }
-        )
+        self.store.set_private_key(private_key_secret.id)
 
     def _on_certificates_relation_joined(
         self, event: ops.framework.EventBase
@@ -832,15 +878,13 @@ class TlsCertificatesHandler(RelationHandler):
             generate_csr,
         )
 
-        peer_relation = self.model.get_relation("peers")
-        if not peer_relation:
+        if not self.store.store_ready():
             event.defer()
             return
 
         private_key = None
-        private_key_secret_id = peer_relation.data[self.charm.model.unit].get(
-            "private_key"
-        )
+        private_key_secret_id = self.store.get_private_key()
+
         if private_key_secret_id:
             private_key_secret = self.model.get_secret(
                 id=private_key_secret_id
@@ -931,11 +975,8 @@ class TlsCertificatesHandler(RelationHandler):
         cert = certs["cert"]
         ca_cert = certs["ca"] + "\n" + "\n".join(certs["chain"])
 
-        peer_relation = self.model.get_relation("peers")
         key = None
-        private_key_secret_id = peer_relation.data[self.charm.model.unit].get(
-            "private_key"
-        )
+        private_key_secret_id = self.store.get_private_key()
         if private_key_secret_id:
             private_key_secret = self.model.get_secret(
                 id=private_key_secret_id
