@@ -46,6 +46,9 @@ import tenacity
 from lightkube import (
     Client,
 )
+from lightkube.models.core_v1 import (
+    ServicePort,
+)
 from lightkube.resources.core_v1 import (
     Service,
 )
@@ -563,7 +566,11 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
         super().__init__(framework)
         self.service_patcher = kube_svc_patch.KubernetesServicePatch(
             self,
-            ports=[(f"{self.app.name}", self.default_public_ingress_port)],
+            ports=[
+                ServicePort(
+                    self.default_public_ingress_port, name=self.app.name
+                )
+            ],
         )
 
     @property
