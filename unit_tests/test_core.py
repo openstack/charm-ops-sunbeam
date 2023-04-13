@@ -149,7 +149,7 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
     """Test Charm with services."""
 
     @mock.patch(
-        "charms.observability_libs.v0.kubernetes_service_patch."
+        "charms.observability_libs.v1.kubernetes_service_patch."
         "KubernetesServicePatch"
     )
     def setUp(self, mock_svc_patch: mock.patch) -> None:
@@ -397,7 +397,7 @@ class TestOSBaseOperatorMultiSVCAPICharm(_TestOSBaseOperatorAPICharm):
     """Test Charm with multiple services."""
 
     @mock.patch(
-        "charms.observability_libs.v0.kubernetes_service_patch."
+        "charms.observability_libs.v1.kubernetes_service_patch."
         "KubernetesServicePatch"
     )
     def setUp(self, mock_svc_patch: mock.patch) -> None:

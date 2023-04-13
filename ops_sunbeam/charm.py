@@ -36,7 +36,7 @@ from typing import (
     Mapping,
 )
 
-import charms.observability_libs.v0.kubernetes_service_patch as kube_svc_patch
+import charms.observability_libs.v1.kubernetes_service_patch as kube_svc_patch
 import ops.charm
 import ops.framework
 import ops.model
