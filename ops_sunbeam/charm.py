@@ -36,7 +36,6 @@ from typing import (
     Mapping,
 )
 
-import charms.observability_libs.v1.kubernetes_service_patch as kube_svc_patch
 import ops.charm
 import ops.framework
 import ops.model
@@ -564,7 +563,11 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
     def __init__(self, framework: ops.framework.Framework) -> None:
         """Run constructor."""
         super().__init__(framework)
-        self.service_patcher = kube_svc_patch.KubernetesServicePatch(
+        from charms.observability_libs.v1.kubernetes_service_patch import (
+            KubernetesServicePatch,
+        )
+
+        self.service_patcher = KubernetesServicePatch(
             self,
             ports=[
                 ServicePort(
