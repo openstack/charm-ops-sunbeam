@@ -424,6 +424,8 @@ def add_identity_credentials_relation_response(
             "project-domain-name": "pdomain_-ame",
             "project-domain-id": "pdomain-id",
             "region": "region12",
+            "public-endpoint": "http://10.20.21.11:80/openstack-keystone",
+            "internal-endpoint": "http://10.153.2.45:80/openstack-keystone",
         },
     )
 
