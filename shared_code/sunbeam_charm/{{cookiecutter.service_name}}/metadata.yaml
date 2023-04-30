@@ -28,8 +28,13 @@ requires:
     limit: 1
   identity-service:
     interface: keystone
-  ingress:
+  ingress-internal:
     interface: ingress
+    optional: true
+    limit: 1
+  ingress-public:
+    interface: ingress
+    limit: 1
   amqp:
     interface: rabbitmq
 

@@ -16,9 +16,9 @@ Build a base geneeric charm with the `charmcraft` tool.
 
 .. code:: bash
 
-   mkdir charm-ironic-operator
-   cd charm-ironic-operator
-   charmcraft init --name sunbeam-ironic-operator
+   mkdir charm-ironic-k8s
+   cd charm-ironic-k8s
+   charmcraft init --author $USER --name ironic-k8s
 
 Add ASO common files to new charm. The script will ask a few basic questions:
 
@@ -26,11 +26,11 @@ Add ASO common files to new charm. The script will ask a few basic questions:
 
     git clone https://opendev.org/openstack/charm-ops-sunbeam
     cd charm-ops-sunbeam
-    ./sunbeam-charm-init.sh ~/branches/charm-ironic-operator
+    ./sunbeam-charm-init.sh ~/charm-ironic-k8s
 
     This tool is designed to be used after 'charmcraft init' was initially run
     service_name [ironic]: ironic
-    charm_name [sunbeam-ironic-operator]: sunbeam-ironic-operator
+    charm_name [ironic-k8s]: ironic-k8s
     ingress_port []: 6385
     db_sync_command [] ironic-dbsync --config-file /etc/ironic/ironic.conf create_schema: 
 
@@ -38,13 +38,15 @@ Fetch interface libs corresponding to the requires interfaces:
 
 .. code:: bash
 
-    cd charm-ironic-operator
-    charmcraft login
+    cd charm-ironic-k8s
+    charmcraft login --export ~/secrets.auth
+    export CHARMCRAFT_AUTH=$(cat ~/secrets.auth)
     charmcraft fetch-lib charms.nginx_ingress_integrator.v0.ingress
     charmcraft fetch-lib charms.data_platform_libs.v0.database_requires
-    charmcraft fetch-lib charms.sunbeam_keystone_operator.v0.identity_service
-    charmcraft fetch-lib charms.sunbeam_rabbitmq_operator.v0.amqp
+    charmcraft fetch-lib charms.keystone_k8s.v1.identity_service
+    charmcraft fetch-lib charms.rabbitmq_k8s.v0.rabbitmq
     charmcraft fetch-lib charms.observability_libs.v1.kubernetes_service_patch
+    charmcraft fetch-lib charms.traefik_k8s.v1.ingress
 
 Templates
 =========
@@ -86,7 +88,7 @@ The next step is to pack the charm into a deployable format
 
 .. code:: bash
 
-    cd charm-ironic-operator
+    cd charm-ironic-k8s
     charmcraft pack
 
 
@@ -98,10 +100,12 @@ run the service. Juju can pull the image directly from dockerhub.
 
 .. code:: bash
 
-    juju deploy ./sunbeam-ironic-operator_ubuntu-20.04-amd64.charm --resource ironic-api-image=kolla/ubuntu-binary-ironic-api:wallaby ironic
-    juju add-relation ironic mysql
-    juju add-relation ironic keystone
-    juju add-relation ironic rabbitmq
+    juju deploy ./ironic-k8s_ubuntu-20.04-amd64.charm --resource ironic-api-image=kolla/ubuntu-binary-ironic-api:yoga ironic
+    juju relate ironic mysql
+    juju relate ironic keystone
+    juju relate ironic rabbitmq
+    juju relate ironic:ingress-internal traefik:ingress
+    juju relate ironic:ingress-public traefik:ingress
 
 Test Service
 ============
@@ -116,7 +120,7 @@ preset. Then check the ironic api service is responding.
     ks     micro       microk8s/localhost  2.9.22   unsupported  13:31:41Z
 
     App     Version  Status  Scale  Charm                    Store  Channel  Rev  OS          Address        Message
-    ironic           active      1  sunbeam-ironic-operator  local             0  kubernetes  10.152.183.73  
+    ironic           active      1  ironic-k8s  local             0  kubernetes  10.152.183.73
 
     Unit       Workload  Agent  Address       Ports  Message
     ironic/0*  active    idle   10.1.155.106

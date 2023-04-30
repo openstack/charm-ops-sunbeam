@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import shutil
 import yaml
@@ -41,6 +41,7 @@ def get_extra_context(charm_dir):
     charm_name = metadata['name']
     service_name = charm_name.replace('sunbeam-', '')
     service_name = service_name.replace('-operator', '')
+    service_name = service_name.replace('-k8s', '')
     ctxt = {
         'service_name': service_name,
         'charm_name': charm_name}

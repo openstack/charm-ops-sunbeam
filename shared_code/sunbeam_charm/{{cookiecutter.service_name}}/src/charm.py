@@ -57,11 +57,5 @@ class {{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}O
         return {{ cookiecutter.ingress_port }}
 
 
-class {{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}WallabyOperatorCharm({{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}OperatorCharm):
-
-    openstack_release = 'wallaby'
-
 if __name__ == "__main__":
-    # Note: use_juju_for_storage=True required per
-    # https://github.com/canonical/operator/issues/506
-    main({{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}WallabyOperatorCharm, use_juju_for_storage=True)
+    main({{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}OperatorCharm)
