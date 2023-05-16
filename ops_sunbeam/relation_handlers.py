@@ -399,7 +399,9 @@ class RabbitMQHandler(RelationHandler):
     def ready(self) -> bool:
         """Whether handler is ready for use."""
         try:
-            return bool(self.interface.password)
+            return bool(self.interface.password) and bool(
+                self.interface.hostnames
+            )
         except (AttributeError, KeyError):
             return False
 
