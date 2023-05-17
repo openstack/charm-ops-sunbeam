@@ -445,7 +445,7 @@ class WSGIPebbleHandler(PebbleHandler):
             )
             # ignore for now - pebble is raising an exited too quickly, but it
             # appears to work properly.
-        files_changed = self.write_config(context)
+        files_changed.extend(self.write_config(context))
         if files_changed:
             self.start_wsgi(restart=True)
         else:
