@@ -365,6 +365,13 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
         test_utils.add_ingress_relation_data(
             self.harness, ingress_rel_id, "public"
         )
+
+        ceph_access_rel_id = test_utils.add_base_ceph_access_relation(
+            self.harness
+        )
+        test_utils.add_ceph_access_relation_response(
+            self.harness, ceph_access_rel_id
+        )
         self.assertTrue(self.harness.charm.relation_handlers_ready())
 
         # Add an optional relation and test if relation_handlers_ready
