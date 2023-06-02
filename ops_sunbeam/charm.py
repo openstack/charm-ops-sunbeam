@@ -798,3 +798,8 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
     def healthcheck_http_url(self) -> str:
         """Healthcheck HTTP URL for the service."""
         return f"http://localhost:{self.default_public_ingress_port}/"
+
+    @property
+    def healthcheck_http_timeout(self) -> str:
+        """Healthcheck HTTP timeout for the service."""
+        return "3s"

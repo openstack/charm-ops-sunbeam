@@ -307,6 +307,11 @@ class MyAPICharm(sunbeam_charm.OSBaseOperatorAPICharm):
         """Healthcheck HTTP URL for the service."""
         return f"http://localhost:{self.default_public_ingress_port}/v3"
 
+    @property
+    def healthcheck_http_timeout(self) -> str:
+        """Healthcheck HTTP timeout for the service."""
+        return "5s"
+
 
 class MultiSvcPebbleHandler(sunbeam_chandlers.ServicePebbleHandler):
     """Test pebble handler for multi service charm."""
