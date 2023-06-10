@@ -516,7 +516,10 @@ class OSBaseOperatorCharmK8S(OSBaseOperatorCharm):
 
     @tenacity.retry(
         stop=tenacity.stop_after_attempt(3),
-        retry=tenacity.retry_if_exception_type(ops.pebble.ChangeError),
+        retry=(
+            tenacity.retry_if_exception_type(ops.pebble.ChangeError)
+            | tenacity.retry_if_exception_type(ops.pebble.ExecError)
+        ),
         after=tenacity.after_log(logger, logging.WARNING),
         wait=tenacity.wait_exponential(multiplier=1, min=10, max=300),
     )
