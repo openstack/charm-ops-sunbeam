@@ -148,11 +148,7 @@ class _TestOSBaseOperatorAPICharm(test_utils.CharmTestCase):
 class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
     """Test Charm with services."""
 
-    @mock.patch(
-        "charms.observability_libs.v1.kubernetes_service_patch."
-        "KubernetesServicePatch"
-    )
-    def setUp(self, mock_svc_patch: mock.patch) -> None:
+    def setUp(self) -> None:
         """Run test class setup."""
         super().setUp(test_charms.MyAPICharm)
 
@@ -396,11 +392,7 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
 class TestOSBaseOperatorMultiSVCAPICharm(_TestOSBaseOperatorAPICharm):
     """Test Charm with multiple services."""
 
-    @mock.patch(
-        "charms.observability_libs.v1.kubernetes_service_patch."
-        "KubernetesServicePatch"
-    )
-    def setUp(self, mock_svc_patch: mock.patch) -> None:
+    def setUp(self) -> None:
         """Charm test class setip."""
         super().setUp(test_charms.TestMultiSvcCharm)
 

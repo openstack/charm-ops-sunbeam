@@ -45,9 +45,6 @@ import tenacity
 from lightkube import (
     Client,
 )
-from lightkube.models.core_v1 import (
-    ServicePort,
-)
 from lightkube.resources.core_v1 import (
     Service,
 )
@@ -475,6 +472,7 @@ class OSBaseOperatorCharmK8S(OSBaseOperatorCharm):
         """Run configuration on this unit."""
         self.check_leader_ready()
         self.check_relation_handlers_ready()
+        self.open_ports()
         self.init_container_services()
         self.check_pebble_handlers_ready()
         self.run_db_sync()
@@ -557,6 +555,10 @@ class OSBaseOperatorCharmK8S(OSBaseOperatorCharm):
                 "Not DB sync ran. Charm does not specify self.db_sync_cmds"
             )
 
+    def open_ports(self):
+        """Register ports in underlying cloud."""
+        pass
+
 
 class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
     """Base class for OpenStack API operators."""
@@ -566,18 +568,6 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
     def __init__(self, framework: ops.framework.Framework) -> None:
         """Run constructor."""
         super().__init__(framework)
-        from charms.observability_libs.v1.kubernetes_service_patch import (
-            KubernetesServicePatch,
-        )
-
-        self.service_patcher = KubernetesServicePatch(
-            self,
-            ports=[
-                ServicePort(
-                    self.default_public_ingress_port, name=self.app.name
-                )
-            ],
-        )
 
     @property
     def service_endpoints(self) -> List[dict]:
@@ -806,3 +796,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
     def healthcheck_http_timeout(self) -> str:
         """Healthcheck HTTP timeout for the service."""
         return "3s"
+
+    def open_ports(self):
+        """Register ports in underlying cloud."""
+        self.unit.open_port("tcp", self.default_public_ingress_port)

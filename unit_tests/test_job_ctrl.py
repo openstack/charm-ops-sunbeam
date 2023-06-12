@@ -16,8 +16,6 @@
 
 import sys
 
-import mock
-
 sys.path.append("lib")  # noqa
 sys.path.append("src")  # noqa
 
@@ -45,11 +43,7 @@ class TestJobCtrl(test_utils.CharmTestCase):
 
     PATCHES = ["time"]
 
-    @mock.patch(
-        "charms.observability_libs.v1.kubernetes_service_patch."
-        "KubernetesServicePatch"
-    )
-    def setUp(self, mock_svc_patch: mock.patch) -> None:
+    def setUp(self) -> None:
         """Charm test class setup."""
         self.container_calls = test_utils.ContainerCalls()
         super().setUp(sunbeam_job_ctrl, self.PATCHES)
