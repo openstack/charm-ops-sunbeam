@@ -421,6 +421,7 @@ class WSGIPebbleHandler(PebbleHandler):
                 "online": {
                     "override": "replace",
                     "level": "ready",
+                    "period": self.charm.healthcheck_period,
                     "timeout": self.charm.healthcheck_http_timeout,
                     "http": {"url": self.charm.healthcheck_http_url},
                 },

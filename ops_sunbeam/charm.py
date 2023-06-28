@@ -788,6 +788,11 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
         return self.wsgi_container_name
 
     @property
+    def healthcheck_period(self) -> str:
+        """Healthcheck period for the service."""
+        return "10s"  # Default value in pebble
+
+    @property
     def healthcheck_http_url(self) -> str:
         """Healthcheck HTTP URL for the service."""
         return f"http://localhost:{self.default_public_ingress_port}/"
