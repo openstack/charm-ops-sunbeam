@@ -30,7 +30,7 @@ from typing import (
     List,
 )
 
-sys.path.append("unit_tests/lib")  # noqa
+sys.path.append("tests/unit_tests/lib")  # noqa
 sys.path.append("src")  # noqa
 
 import ops_sunbeam.charm as sunbeam_charm

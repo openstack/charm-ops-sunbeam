@@ -61,11 +61,34 @@ class IdentityResourceClientCharm(CharmBase):
         # IdentityResource Relation has goneaway. No ops can be sent.
         pass
 ```
+
+A sample ops request can be of format
+{
+    "id": <request id>
+    "tag": <string to identify request>
+    "ops": [
+        {
+            "name": <op name>,
+            "params": {
+                <param 1>: <value 1>,
+                <param 2>: <value 2>
+            }
+        }
+    ]
+}
+
+For any sensitive data in the ops params, the charm can create secrets and pass
+secret id instead of sensitive data as part of ops request. The charm should
+ensure to grant secret access to provider charm i.e., keystone over relation.
+The secret content should hold the sensitive data with same name as param name.
 """
 
 import json
 import logging
 
+from ops.charm import (
+    RelationEvent,
+)
 from ops.framework import (
     EventBase,
     EventSource,
@@ -88,7 +111,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 REQUEST_NOT_SENT = 1
@@ -96,19 +119,19 @@ REQUEST_SENT = 2
 REQUEST_PROCESSED = 3
 
 
-class IdentityOpsProviderReadyEvent(EventBase):
+class IdentityOpsProviderReadyEvent(RelationEvent):
     """Has IdentityOpsProviderReady Event."""
 
     pass
 
 
-class IdentityOpsResponseEvent(EventBase):
+class IdentityOpsResponseEvent(RelationEvent):
     """Has IdentityOpsResponse Event."""
 
     pass
 
 
-class IdentityOpsProviderGoneAwayEvent(EventBase):
+class IdentityOpsProviderGoneAwayEvent(RelationEvent):
     """Has IdentityOpsProviderGoneAway Event."""
 
     pass
@@ -149,18 +172,18 @@ class IdentityResourceRequires(Object):
     def _on_identity_resource_relation_joined(self, event):
         """Handle IdentityResource joined."""
         self._stored.provider_ready = True
-        self.on.provider_ready.emit()
+        self.on.provider_ready.emit(event.relation)
 
     def _on_identity_resource_relation_changed(self, event):
         """Handle IdentityResource changed."""
         id_ = self.response.get("id")
         self.save_request_in_store(id_, None, None, REQUEST_PROCESSED)
-        self.on.response_available.emit()
+        self.on.response_available.emit(event.relation)
 
     def _on_identity_resource_relation_broken(self, event):
         """Handle IdentityResource broken."""
         self._stored.provider_ready = False
-        self.on.provider_goneaway.emit()
+        self.on.provider_goneaway.emit(event.relation)
 
     @property
     def _identity_resource_rel(self) -> Relation:
@@ -339,7 +362,9 @@ class IdentityResourceProvides(Object):
             return
 
         logger.debug("Update response from keystone")
-        _identity_resource_rel = self.charm.model.get_relation(relation_name, relation_id)
+        _identity_resource_rel = self.charm.model.get_relation(
+            relation_name, relation_id
+        )
         if not _identity_resource_rel:
             # Relation has disappeared so skip send of data
             return

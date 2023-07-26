@@ -19,7 +19,7 @@ import sys
 
 import mock
 
-sys.path.append("lib")  # noqa
+sys.path.append("tests/lib")  # noqa
 sys.path.append("src")  # noqa
 
 import ops.model
