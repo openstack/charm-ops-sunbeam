@@ -289,8 +289,10 @@ class DBHandler(RelationHandler):
             return
 
         data = event.relation.data[event.relation.app]
-        # XXX: Let's not log the credentials with the data
-        logger.info(f"Received data: {data}")
+        display_data = {k: v for k, v in data.items()}
+        if "password" in display_data:
+            display_data["password"] = "REDACTED"
+        logger.info(f"Received data: {display_data}")
         self.callback_f(event)
 
     def get_relation_data(self) -> dict:
