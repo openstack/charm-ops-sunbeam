@@ -26,6 +26,7 @@ import typing
 import unittest
 from typing import (
     List,
+    Optional,
 )
 
 import ops
@@ -286,9 +287,9 @@ class CharmTestCase(unittest.TestCase):
                 received_data = infile.read()
             self.assertEqual(contents, received_data)
         if user:
-            self.assertEqual(test_file.user, user)
+            self.assertEqual(test_file.user_id, user)
         if group:
-            self.assertEqual(test_file.group, group)
+            self.assertEqual(test_file.group_id, group)
         if permissions:
             self.assertEqual(test_file.permissions, permissions)
 
@@ -637,6 +638,7 @@ def get_harness(
             self,
             command: typing.List[str],
             *,
+            service_context: Optional[str] = None,
             environment: typing.Dict[str, str] = None,
             working_dir: str = None,
             timeout: float = None,
@@ -685,11 +687,14 @@ def get_harness(
             ]  # /charm/containers/<container_name>/pebble.socket
             client = self._pebble_clients.get(container, None)
             if client is None:
-                # Below three lines are changes from parent class method
-                client = _OSTestingPebbleClient(self)
+                container_root = self._harness_container_path / container
+                container_root.mkdir()
+                # Below two lines are changes from parent class method
+                client = _OSTestingPebbleClient(
+                    self, container_root=container_root
+                )
                 # Add container name to the pebble client
                 client.container_name = container
-                self._pebble_clients[container] = client
 
                 # we need to know which container a new pebble client belongs to
                 # so we can figure out which storage mounts must be simulated on

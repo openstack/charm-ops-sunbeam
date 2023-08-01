@@ -14,6 +14,7 @@
 
 """Test aso."""
 
+import os
 import sys
 
 import mock
@@ -172,19 +173,21 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
         ]
         expect_string = "\n" + "\n".join(expect_entries)
         self.harness.set_can_connect("my-service", True)
+        effective_user_id = os.geteuid()
+        effective_group_id = os.getegid()
         self.check_file(
             "my-service",
             "/etc/my-service/my-service.conf",
             contents=expect_string,
-            user="my-service",
-            group="my-service",
+            user=effective_user_id,
+            group=effective_group_id,
         )
         self.check_file(
             "my-service",
             "/etc/apache2/sites-available/wsgi-my-service.conf",
             contents=expect_string,
-            user="root",
-            group="root",
+            user=effective_user_id,
+            group=effective_group_id,
         )
 
     def test_assess_status(self) -> None:
