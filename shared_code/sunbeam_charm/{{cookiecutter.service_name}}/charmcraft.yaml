@@ -7,11 +7,22 @@ bases:
     - name: "ubuntu"
       channel: "22.04"
 parts:
+  update-certificates:
+    plugin: nil
+    override-build: |
+      apt update
+      apt install -y ca-certificates
+      update-ca-certificates
+
   charm:
+    after: [update-certificates]
     build-packages:
       - git
       - libffi-dev
       - libssl-dev
+      - rustc
+      - cargo
+      - pkg-config
     charm-binary-python-packages:
       - cryptography
       - jsonschema

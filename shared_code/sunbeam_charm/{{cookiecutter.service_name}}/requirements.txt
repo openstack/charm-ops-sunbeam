@@ -2,7 +2,7 @@ ops
 jinja2
 git+https://github.com/openstack/charm-ops-sunbeam#egg=ops_sunbeam
 lightkube
-# These are only needeed if the charm relates to ceph
-git+https://github.com/openstack/charm-ops-interface-ceph-client#egg=interface_ceph_client
-# Charmhelpers is only present as interface_ceph_client uses it.
-git+https://github.com/juju/charm-helpers.git#egg=charmhelpers
+
+# Uncomment below if charm relates to ceph
+# git+https://github.com/openstack/charm-ops-interface-ceph-client#egg=interface_ceph_client
+# git+https://github.com/juju/charm-helpers.git#egg=charmhelpers

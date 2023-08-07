@@ -9,9 +9,14 @@ description: |
 version: 3
 bases:
   - name: ubuntu
-    channel: 20.04/stable
+    channel: 22.04/stable
+assumes:
+  - k8s-api
+  - juju >= 3.2
 tags:
 - openstack
+source: https://opendev.org/openstack/charm-{{ cookiecutter.service_name }}-k8s
+issues: https://bugs.launchpad.net/charm-{{ cookiecutter.service_name }}-k8s
 
 containers:
   {{ cookiecutter.service_name }}-api:

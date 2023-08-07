@@ -29,7 +29,7 @@ class {{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}O
     @property
     def service_conf(self) -> str:
         """Service default configuration file."""
-        return f"/etc/{{ cookiecutter.service_name }}/{{ cookiecutter.service_name }}.conf"
+        return "/etc/{{ cookiecutter.service_name }}/{{ cookiecutter.service_name }}.conf"
 
     @property
     def service_user(self) -> str:
@@ -43,6 +43,7 @@ class {{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}O
 
     @property
     def service_endpoints(self):
+        """Return service endpoints for the service."""
         return [
             {
                 'service_name': '{{ cookiecutter.service_name }}',
@@ -54,6 +55,7 @@ class {{ cookiecutter.service_name[0]|upper}}{{cookiecutter.service_name[1:] }}O
 
     @property
     def default_public_ingress_port(self):
+        """Ingress Port for API service."""
         return {{ cookiecutter.ingress_port }}
 
 

@@ -1,0 +1,18 @@
+gate_bundles:
+  - smoke
+smoke_bundles:
+  - smoke
+configure:
+  - zaza.openstack.charm_tests.keystone.setup.add_tempest_roles
+tests: []
+tests_options:
+  trust:
+    - smoke
+  ignore_hard_deploy_errors:
+    - smoke
+
+  tempest:
+    default:
+      smoke: True
+
+target_deploy_status: []
