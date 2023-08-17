@@ -1058,3 +1058,77 @@ class IdentityCredentialsRequiresHandler(RelationHandler):
             return bool(self.interface.password)
         except (AttributeError, KeyError):
             return False
+
+
+class IdentityResourceRequiresHandler(RelationHandler):
+    """Handles the identity resource relation on the requires side."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable,
+        mandatory: bool = False,
+    ):
+        """Create a new identity-ops handler.
+
+        Create a new IdentityResourceRequiresHandler that handles initial
+        events from the relation and invokes the provided callbacks based on
+        the event raised.
+
+        :param charm: the Charm class the handler is for
+        :type charm: ops.charm.CharmBase
+        :param relation_name: the relation the handler is bound to
+        :type relation_name: str
+        :param callback_f: the function to call when the nodes are connected
+        :type callback_f: Callable
+        :param mandatory: If the relation is mandatory to proceed with
+                          configuring charm
+        :type mandatory: bool
+        """
+        super().__init__(charm, relation_name, callback_f, mandatory)
+
+    def setup_event_handler(self):
+        """Configure event handlers for an Identity resource relation."""
+        import charms.keystone_k8s.v0.identity_resource as id_ops
+
+        logger.debug("Setting up Identity Resource event handler")
+        ops_svc = id_ops.IdentityResourceRequires(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(
+            ops_svc.on.provider_ready,
+            self._on_provider_ready,
+        )
+        self.framework.observe(
+            ops_svc.on.provider_goneaway,
+            self._on_provider_goneaway,
+        )
+        self.framework.observe(
+            ops_svc.on.response_available,
+            self._on_response_available,
+        )
+        return ops_svc
+
+    def _on_provider_ready(self, event) -> None:
+        """Handles provider_ready  event."""
+        logger.debug(
+            "Identity ops provider available and ready to process any requests"
+        )
+        self.callback_f(event)
+
+    def _on_provider_goneaway(self, event) -> None:
+        """Handles provider_goneaway  event."""
+        logger.info("Keystone provider not available process any requests")
+        self.callback_f(event)
+
+    def _on_response_available(self, event) -> None:
+        """Handles response available  events."""
+        logger.info("Handle response from identity ops")
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        """Whether handler is ready for use."""
+        return self.interface.ready()
