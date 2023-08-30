@@ -1132,3 +1132,71 @@ class IdentityResourceRequiresHandler(RelationHandler):
     def ready(self) -> bool:
         """Whether handler is ready for use."""
         return self.interface.ready()
+
+
+class CeilometerServiceRequiresHandler(RelationHandler):
+    """Handle ceilometer service relation on the requires side."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable,
+        mandatory: bool = False,
+    ):
+        """Create a new ceilometer-service handler.
+
+        Create a new CeilometerServiceRequiresHandler that handles initial
+        events from the relation and invokes the provided callbacks based on
+        the event raised.
+
+        :param charm: the Charm class the handler is for
+        :type charm: ops.charm.CharmBase
+        :param relation_name: the relation the handler is bound to
+        :type relation_name: str
+        :param callback_f: the function to call when the nodes are connected
+        :type callback_f: Callable
+        :param mandatory: If the relation is mandatory to proceed with
+                          configuring charm
+        :type mandatory: bool
+        """
+        super().__init__(charm, relation_name, callback_f, mandatory)
+
+    def setup_event_handler(self) -> None:
+        """Configure event handlers for Ceilometer service relation."""
+        import charms.ceilometer_k8s.v0.ceilometer_service as ceilometer_svc
+
+        logger.debug("Setting up Ceilometer service event handler")
+        svc = ceilometer_svc.CeilometerServiceRequires(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(
+            svc.on.config_changed,
+            self._on_config_changed,
+        )
+        self.framework.observe(
+            svc.on.goneaway,
+            self._on_goneaway,
+        )
+        return svc
+
+    def _on_config_changed(self, event: ops.framework.EventBase) -> None:
+        """Handle config_changed  event."""
+        logger.debug(
+            "Ceilometer service provider config changed event received"
+        )
+        self.callback_f(event)
+
+    def _on_goneaway(self, event: ops.framework.EventBase) -> None:
+        """Handle gone_away  event."""
+        logger.debug("Ceilometer service relation is departed/broken")
+        self.callback_f(event)
+
+    @property
+    def ready(self) -> bool:
+        """Whether handler is ready for use."""
+        try:
+            return bool(self.interface.telemetry_secret)
+        except (AttributeError, KeyError):
+            return False
