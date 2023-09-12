@@ -319,9 +319,9 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
         # Add ingress relation
         test_utils.add_complete_ingress_relation(self.harness)
         self.assertEqual(
-            self.harness.charm.internal_url, "http://internal-url"
+            self.harness.charm.internal_url, "http://internal-url:80"
         )
-        self.assertEqual(self.harness.charm.public_url, "http://public-url")
+        self.assertEqual(self.harness.charm.public_url, "http://public-url:80")
 
     @mock.patch("ops_sunbeam.charm.Client")
     def test_endpoint_urls_no_ingress(self, mock_client: mock.patch) -> None:
@@ -397,6 +397,41 @@ class TestOSBaseOperatorAPICharm(_TestOSBaseOperatorAPICharm):
             self.harness, ingress_rel_id, "public"
         )
         self.assertTrue(self.harness.charm.relation_handlers_ready())
+
+    def test_add_explicit_port(self):
+        """Test add_explicit_port method."""
+        self.assertEqual(
+            self.harness.charm.add_explicit_port("http://test.org/something"),
+            "http://test.org:80/something",
+        )
+        self.assertEqual(
+            self.harness.charm.add_explicit_port(
+                "http://test.org:80/something"
+            ),
+            "http://test.org:80/something",
+        )
+        self.assertEqual(
+            self.harness.charm.add_explicit_port("https://test.org/something"),
+            "https://test.org:443/something",
+        )
+        self.assertEqual(
+            self.harness.charm.add_explicit_port(
+                "https://test.org:443/something"
+            ),
+            "https://test.org:443/something",
+        )
+        self.assertEqual(
+            self.harness.charm.add_explicit_port(
+                "http://test.org:8080/something"
+            ),
+            "http://test.org:8080/something",
+        )
+        self.assertEqual(
+            self.harness.charm.add_explicit_port(
+                "https://test.org:8443/something"
+            ),
+            "https://test.org:8443/something",
+        )
 
 
 class TestOSBaseOperatorMultiSVCAPICharm(_TestOSBaseOperatorAPICharm):

@@ -31,6 +31,7 @@ containers and managing the service running in the container.
 
 import ipaddress
 import logging
+import urllib
 from typing import (
     List,
     Mapping,
@@ -690,11 +691,13 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
                     "ingress-public.url of: %s",
                     self.ingress_public.url,
                 )
-                return self.ingress_public.url
+                return self.add_explicit_port(self.ingress_public.url)
         except (AttributeError, KeyError):
             pass
 
-        return self.service_url(self.public_ingress_address)
+        return self.add_explicit_port(
+            self.service_url(self.public_ingress_address)
+        )
 
     @property
     def admin_url(self) -> str:
@@ -702,7 +705,7 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
         hostname = self.model.get_binding(
             "identity-service"
         ).network.ingress_address
-        return self.service_url(hostname)
+        return self.add_explicit_port(self.service_url(hostname))
 
     @property
     def internal_url(self) -> str:
@@ -714,14 +717,14 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
                     "ingress_internal.url of: %s",
                     self.ingress_internal.url,
                 )
-                return self.ingress_internal.url
+                return self.add_explicit_port(self.ingress_internal.url)
         except (AttributeError, KeyError):
             pass
 
         hostname = self.model.get_binding(
             "identity-service"
         ).network.ingress_address
-        return self.service_url(hostname)
+        return self.add_explicit_port(self.service_url(hostname))
 
     def get_pebble_handlers(self) -> List[sunbeam_chandlers.PebbleHandler]:
         """Pebble handlers for the service."""
@@ -813,3 +816,27 @@ class OSBaseOperatorAPICharm(OSBaseOperatorCharmK8S):
     def open_ports(self):
         """Register ports in underlying cloud."""
         self.unit.open_port("tcp", self.default_public_ingress_port)
+
+    def add_explicit_port(self, org_url: str) -> str:
+        """Update a url to add an explicit port.
+
+        Keystone auth endpoint parsing can give odd results if
+        an explicit port is missing.
+        """
+        url = urllib.parse.urlparse(org_url)
+        new_netloc = url.netloc
+        if not url.port:
+            if url.scheme == "http":
+                new_netloc = url.netloc + ":80"
+            elif url.scheme == "https":
+                new_netloc = url.netloc + ":443"
+        return urllib.parse.urlunparse(
+            (
+                url.scheme,
+                new_netloc,
+                url.path,
+                url.params,
+                url.query,
+                url.fragment,
+            )
+        )
