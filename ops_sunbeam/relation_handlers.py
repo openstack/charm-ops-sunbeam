@@ -138,6 +138,10 @@ class RelationHandler(ops.charm.Object):
         """Pull together context for rendering templates."""
         return self.interface_properties()
 
+    def update_relation_data(self):
+        """Update relation outside of relation context."""
+        raise NotImplementedError
+
 
 class IngressHandler(RelationHandler):
     """Base class to handle Ingress relations."""
@@ -811,6 +815,7 @@ class TlsCertificatesHandler(RelationHandler):
     ) -> None:
         """Run constructor."""
         self.sans = sans
+        self._private_key = None
         super().__init__(charm, relation_name, callback_f, mandatory)
         try:
             self.store = self.PeerKeyStore(
@@ -818,6 +823,7 @@ class TlsCertificatesHandler(RelationHandler):
             )
         except KeyError:
             self.store = self.LocalDBKeyStore(charm._state)
+        self.setup_private_key()
 
     def setup_event_handler(self) -> None:
         """Configure event handlers for tls relation."""
@@ -831,7 +837,6 @@ class TlsCertificatesHandler(RelationHandler):
         self.certificates = TLSCertificatesRequiresV1(
             self.charm, "certificates"
         )
-        self.framework.observe(self.charm.on.install, self._on_install)
         self.framework.observe(
             self.charm.on.certificates_relation_joined,
             self._on_certificates_relation_joined,
@@ -854,7 +859,8 @@ class TlsCertificatesHandler(RelationHandler):
         )
         return self.certificates
 
-    def _on_install(self, event: ops.framework.EventBase) -> None:
+    def setup_private_key(self) -> None:
+        """Create and store private key if needed."""
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
         from charms.tls_certificates_interface.v1.tls_certificates import (
@@ -862,45 +868,65 @@ class TlsCertificatesHandler(RelationHandler):
         )
 
         if not self.store.store_ready():
-            event.defer()
+            logger.debug("Store not ready, cannot generate key")
             return
 
         if self.store.get_private_key():
-            # Secret already saved
+            logger.debug("Private key already present")
+            self._private_key = self.store.get_private_key()
+            private_key_secret_id = self.store.get_private_key()
+            private_key_secret = self.model.get_secret(
+                id=private_key_secret_id
+            )
+            self._private_key = private_key_secret.get_content().get(
+                "private-key"
+            )
             return
 
-        private_key = generate_private_key()
+        self._private_key = generate_private_key()
         private_key_secret = self.model.unit.add_secret(
-            {"private-key": private_key.decode()},
+            {"private-key": self._private_key.decode()},
             label=f"{self.charm.model.unit}-private-key",
         )
 
         self.store.set_private_key(private_key_secret.id)
 
+    @property
+    def private_key(self):
+        """Private key for certificates."""
+        logger.debug("Returning private key: {}".format(self._private_key))
+        return self._private_key
+
+    def update_relation_data(self):
+        """Request certificates outside of relation context."""
+        self._request_certificates()
+
     def _on_certificates_relation_joined(
         self, event: ops.framework.EventBase
     ) -> None:
+        """Request certificates in response to relation join event."""
+        self._request_certificates()
+
+    def _request_certificates(self):
+        """Request certificates from remote provider."""
         # Lazy import to ensure this lib is only required if the charm
         # has this relation.
         from charms.tls_certificates_interface.v1.tls_certificates import (
             generate_csr,
         )
 
-        if not self.store.store_ready():
-            event.defer()
+        if self.ready:
+            logger.debug("Certificate request already complete.")
             return
 
-        private_key = None
-        private_key_secret_id = self.store.get_private_key()
-
-        if private_key_secret_id:
-            private_key_secret = self.model.get_secret(
-                id=private_key_secret_id
-            )
-            private_key = private_key_secret.get_content().get("private-key")
+        if self.private_key:
+            logger.debug("Private key found, requesting certificates")
+        else:
+            logger.debug("Cannot request certificates, private key not found")
+            return
 
         csr = generate_csr(
-            private_key=private_key.encode(),
+            private_key=self.private_key.encode(),
             subject=self.charm.model.unit.name.replace("/", "-"),
             sans=self.sans,
         )
@@ -983,16 +1009,8 @@ class TlsCertificatesHandler(RelationHandler):
         cert = certs["cert"]
         ca_cert = certs["ca"] + "\n" + "\n".join(certs["chain"])
 
-        key = None
-        private_key_secret_id = self.store.get_private_key()
-        if private_key_secret_id:
-            private_key_secret = self.model.get_secret(
-                id=private_key_secret_id
-            )
-            key = private_key_secret.get_content().get("private-key")
-
         ctxt = {
-            "key": key,
+            "key": self.private_key,
             "cert": cert,
             "ca_cert": ca_cert,
         }
