@@ -1200,3 +1200,70 @@ class CeilometerServiceRequiresHandler(RelationHandler):
             return bool(self.interface.telemetry_secret)
         except (AttributeError, KeyError):
             return False
+
+
+class CephAccessRequiresHandler(RelationHandler):
+    """Handles the ceph access relation on the requires side."""
+
+    def __init__(
+        self,
+        charm: ops.charm.CharmBase,
+        relation_name: str,
+        callback_f: Callable,
+        mandatory: bool = False,
+    ) -> None:
+        """Create a new ceph-access handler.
+
+        Create a new CephAccessRequiresHandler that handles initial
+        events from the relation and invokes the provided callbacks based on
+        the event raised.
+
+        :param charm: the Charm class the handler is for
+        :type charm: ops.charm.CharmBase
+        :param relation_name: the relation the handler is bound to
+        :type relation_name: str
+        :param callback_f: the function to call when the nodes are connected
+        :type callback_f: Callable
+        """
+        super().__init__(charm, relation_name, callback_f, mandatory)
+
+    def setup_event_handler(self) -> ops.charm.Object:
+        """Configure event handlers for ceph-access relation."""
+        import charms.cinder_ceph_k8s.v0.ceph_access as ceph_access
+
+        logger.debug("Setting up the ceph-access event handler")
+        ceph_access = ceph_access.CephAccessRequires(
+            self.charm,
+            self.relation_name,
+        )
+        self.framework.observe(ceph_access.on.ready, self._ceph_access_ready)
+        self.framework.observe(
+            ceph_access.on.goneaway, self._ceph_access_goneaway
+        )
+        return ceph_access
+
+    def _ceph_access_ready(self, event: ops.framework.EventBase) -> None:
+        """React to credential ready event."""
+        self.callback_f(event)
+
+    def _ceph_access_goneaway(self, event: ops.framework.EventBase) -> None:
+        """React to credential goneaway event."""
+        self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
+
+    @property
+    def ready(self) -> bool:
+        """Whether handler is ready for use."""
+        try:
+            return bool(self.interface.ready)
+        except (AttributeError, KeyError):
+            return False
+
+    def context(self) -> dict:
+        """Context containing Ceph access data."""
+        ctxt = super().context()
+        data = self.interface.ceph_access_data
+        ctxt["key"] = data.get("key")
+        ctxt["uuid"] = data.get("uuid")
+        return ctxt
