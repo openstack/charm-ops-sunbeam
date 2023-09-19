@@ -178,14 +178,6 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 "identity-credentials" in self.mandatory_relations,
             )
             handlers.append(self.ccreds)
-        if self.can_add_handler("ceph-access", handlers):
-            self.ceph_access = sunbeam_rhandlers.CephAccessRequiresHandler(
-                self,
-                "ceph-access",
-                self.configure_charm,
-                "ceph-access" in self.mandatory_relations,
-            )
-            handlers.append(self.ceph_access)
         return handlers
 
     def get_sans(self) -> List[str]:

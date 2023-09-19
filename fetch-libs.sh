@@ -13,6 +13,5 @@ charmcraft fetch-lib charms.rabbitmq_k8s.v0.rabbitmq
 charmcraft fetch-lib charms.ovn_central_k8s.v0.ovsdb
 charmcraft fetch-lib charms.traefik_k8s.v1.ingress
 charmcraft fetch-lib charms.ceilometer_k8s.v0.ceilometer_service
-charmcraft fetch-lib charms.cinder_ceph_k8s.v0.ceph_access                                                                                                                              
 echo "Copying libs to to unit_test dir"
 rsync --recursive --delete lib/ unit_tests/lib/
