@@ -116,8 +116,6 @@ requires:
   identity-credentials:
     interface: keystone-credentials
     limit: 1
-  ceph-access:
-    interface: cinder-ceph-key
 
 peers:
   peers:

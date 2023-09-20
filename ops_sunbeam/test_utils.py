@@ -344,26 +344,6 @@ def add_amqp_relation_credentials(harness: Harness, rel_id: str) -> None:
     )
 
 
-def add_base_ceph_access_relation(harness: Harness) -> str:
-    """Add ceph-access relation."""
-    rel_id = harness.add_relation(
-        "ceph-access", "cinder-ceph", app_data={"a": "b"}
-    )
-    return rel_id
-
-
-def add_ceph_access_relation_response(harness: Harness, rel_id: str) -> None:
-    """Add secret data to cinder-access relation."""
-    credentials_content = {"uuid": "svcuser1", "key": "svcpass1"}
-    credentials_id = harness.add_model_secret(
-        "cinder-ceph", credentials_content
-    )
-    harness.grant_secret(credentials_id, harness.charm.app.name)
-    harness.update_relation_data(
-        rel_id, "cinder-ceph", {"access-credentials": credentials_id}
-    )
-
-
 def add_base_identity_service_relation(harness: Harness) -> str:
     """Add identity-service relation."""
     rel_id = harness.add_relation("identity-service", "keystone")
