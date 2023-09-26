@@ -159,7 +159,7 @@ class IngressHandler(RelationHandler):
     def setup_event_handler(self) -> ops.charm.Object:
         """Configure event handlers for an Ingress relation."""
         logger.debug("Setting up ingress event handler")
-        from charms.traefik_k8s.v1.ingress import (
+        from charms.traefik_k8s.v2.ingress import (
             IngressPerAppRequirer,
         )
 
@@ -176,7 +176,7 @@ class IngressHandler(RelationHandler):
         """Handle ingress relation changed events.
 
         `event` is an instance of
-        `charms.traefik_k8s.v1.ingress.IngressPerAppReadyEvent`.
+        `charms.traefik_k8s.v2.ingress.IngressPerAppReadyEvent`.
         """
         url = self.url
         logger.debug(f"Received url: {url}")
@@ -189,7 +189,7 @@ class IngressHandler(RelationHandler):
         """Handle ingress relation revoked event.
 
         `event` is an instance of
-        `charms.traefik_k8s.v1.ingress.IngressPerAppRevokedEvent`
+        `charms.traefik_k8s.v2.ingress.IngressPerAppRevokedEvent`
         """
         # Callback call to update keystone endpoints
         self.callback_f(event)
@@ -202,13 +202,28 @@ class IngressHandler(RelationHandler):
         # Call self.interface._get_url_from_relation_data rather than
         # self.interface.url due to bug:
         # https://github.com/canonical/traefik-k8s-operator/issues/140
-        if self.interface._get_url_from_relation_data():
+        from charms.traefik_k8s.v2.ingress import (
+            DataValidationError,
+        )
+
+        try:
+            url = self.interface._get_url_from_relation_data()
+        except DataValidationError:
+            logger.debug(
+                "Failed to fetch relation's url,"
+                " the root cause might a change to V2 Ingress, "
+                "in this case, this error should go away.",
+                exc_info=True,
+            )
+            return False
+
+        if url:
             return True
 
         return False
 
     @property
-    def url(self) -> str:
+    def url(self) -> Optional[str]:
         """Return the URL used by the remote ingress service."""
         if not self.ready:
             return None
