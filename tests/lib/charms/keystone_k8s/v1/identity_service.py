@@ -100,7 +100,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 1
 
 
 logger = logging.getLogger(__name__)
@@ -349,6 +349,11 @@ class IdentityServiceRequires(Object):
         """Return the public_auth_url."""
         return self.get_remote_app_data('public-auth-url')
 
+    @property
+    def admin_role(self) -> str:
+        """Return the admin_role."""
+        return self.get_remote_app_data('admin-role')
+
     def register_services(self, service_endpoints: dict,
                           region: str) -> None:
         """Request access to the IdentityService server."""
@@ -481,7 +486,8 @@ class IdentityServiceProvides(Object):
                                          internal_auth_url: str,
                                          admin_auth_url: str,
                                          public_auth_url: str,
-                                         service_credentials: str):
+                                         service_credentials: str,
+                                         admin_role: str):
         logging.debug("Setting identity_service connection information.")
         _identity_service_rel = None
         for relation in self.framework.model.relations[relation_name]:
@@ -516,3 +522,4 @@ class IdentityServiceProvides(Object):
         app_data["admin-auth-url"] = admin_auth_url
         app_data["public-auth-url"] = public_auth_url
         app_data["service-credentials"] = service_credentials
+        app_data["admin-role"] = admin_role
