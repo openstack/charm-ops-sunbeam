@@ -252,7 +252,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
 
     def configure_app_non_leader(self, event):
         """Setup steps for a non-leader after leader has bootstrapped."""
-        if not self.bootstrapped:
+        if not self.bootstrapped():
             raise sunbeam_guard.WaitingExceptionError("Leader not ready")
 
     def configure_app(self, event):
