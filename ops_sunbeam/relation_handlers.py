@@ -825,12 +825,14 @@ class TlsCertificatesHandler(RelationHandler):
         charm: ops.charm.CharmBase,
         relation_name: str,
         callback_f: Callable,
-        sans: List[str] = None,
+        sans_dns: List[str] = None,
+        sans_ips: List[str] = None,
         mandatory: bool = False,
     ) -> None:
         """Run constructor."""
-        self.sans = sans
         self._private_key = None
+        self.sans_dns = sans_dns
+        self.sans_ips = sans_ips
         super().__init__(charm, relation_name, callback_f, mandatory)
         try:
             self.store = self.PeerKeyStore(
@@ -943,7 +945,8 @@ class TlsCertificatesHandler(RelationHandler):
         csr = generate_csr(
             private_key=self.private_key.encode(),
             subject=self.charm.model.unit.name.replace("/", "-"),
-            sans=self.sans,
+            sans_dns=self.sans_dns,
+            sans_ip=self.sans_ips,
         )
         self.certificates.request_certificate_creation(
             certificate_signing_request=csr

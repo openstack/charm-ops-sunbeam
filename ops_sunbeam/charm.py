@@ -166,8 +166,9 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
                 self,
                 "certificates",
                 self.configure_charm,
-                self.get_sans(),
-                "certificates" in self.mandatory_relations,
+                sans_dns=self.get_sans_dns(),
+                sans_ips=self.get_sans_ips(),
+                mandatory="certificates" in self.mandatory_relations,
             )
             handlers.append(self.certs)
         if self.can_add_handler("identity-credentials", handlers):
@@ -188,12 +189,16 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             handlers.append(self.ceph_access)
         return handlers
 
-    def get_sans(self) -> List[str]:
+    def get_sans_ips(self) -> List[str]:
         """Return Subject Alternate Names to use in cert for service."""
-        str_ips_sans = [str(s) for s in self.get_ip_sans()]
-        return list(set(str_ips_sans + self.get_domain_name_sans()))
+        str_ips_sans = [str(s) for s in self._ip_sans()]
+        return list(set(str_ips_sans))
 
-    def get_ip_sans(self) -> List[ipaddress.IPv4Address]:
+    def get_sans_dns(self) -> List[str]:
+        """Return Subject Alternate Names to use in cert for service."""
+        return list(set(self.get_domain_name_sans()))
+
+    def _ip_sans(self) -> List[ipaddress.IPv4Address]:
         """Get IP addresses for service."""
         ip_sans = []
         for relation_name in self.meta.relations.keys():
