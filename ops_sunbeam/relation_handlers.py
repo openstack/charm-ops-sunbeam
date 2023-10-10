@@ -32,6 +32,7 @@ import ops.framework
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
+    SecretNotFoundError,
     UnknownStatus,
     WaitingStatus,
 )
@@ -892,6 +893,21 @@ class TlsCertificatesHandler(RelationHandler):
             logger.debug("Private key already present")
             self._private_key = self.store.get_private_key()
             private_key_secret_id = self.store.get_private_key()
+            try:
+                private_key_secret = self.model.get_secret(
+                    id=private_key_secret_id
+                )
+            except SecretNotFoundError:
+                # When a unit is departing its secrets are removed by Juju.
+                # So trying to access the secret will result in
+                # SecretNotFoundError. Given this secret is set by this
+                # unit and only consumed by this unit it is unlikely there
+                # is any other reason for the secret to be missing.
+                logger.debug(
+                    "SecretNotFoundError not found, likely due to departing "
+                    "unit."
+                )
+                return
             private_key_secret = self.model.get_secret(
                 id=private_key_secret_id
             )
