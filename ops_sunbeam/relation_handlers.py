@@ -914,7 +914,12 @@ class TlsCertificatesHandler(RelationHandler):
 
     def update_relation_data(self):
         """Request certificates outside of relation context."""
-        self._request_certificates()
+        if list(self.model.relations[self.relation_name]):
+            self._request_certificates()
+        else:
+            logger.debug(
+                "Not updating certificate request data, no relation found"
+            )
 
     def _on_certificates_relation_joined(
         self, event: ops.framework.EventBase
