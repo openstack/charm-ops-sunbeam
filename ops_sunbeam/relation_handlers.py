@@ -204,15 +204,12 @@ class IngressHandler(RelationHandler):
     @property
     def ready(self) -> bool:
         """Whether the handler is ready for use."""
-        # Call self.interface._get_url_from_relation_data rather than
-        # self.interface.url due to bug:
-        # https://github.com/canonical/traefik-k8s-operator/issues/140
         from charms.traefik_k8s.v2.ingress import (
             DataValidationError,
         )
 
         try:
-            url = self.interface._get_url_from_relation_data()
+            url = self.interface.url
         except DataValidationError:
             logger.debug(
                 "Failed to fetch relation's url,"
@@ -233,9 +230,7 @@ class IngressHandler(RelationHandler):
         if not self.ready:
             return None
 
-        # Call self.interface._get_url_from_relation_data rather than
-        # self.interface.url due to bug:
-        return self.interface._get_url_from_relation_data()
+        return self.interface.url
 
     def context(self) -> dict:
         """Context containing ingress data."""
