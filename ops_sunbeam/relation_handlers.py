@@ -886,7 +886,6 @@ class TlsCertificatesHandler(RelationHandler):
 
         if self.store.get_private_key():
             logger.debug("Private key already present")
-            self._private_key = self.store.get_private_key()
             private_key_secret_id = self.store.get_private_key()
             try:
                 private_key_secret = self.model.get_secret(
@@ -906,8 +905,8 @@ class TlsCertificatesHandler(RelationHandler):
             private_key_secret = self.model.get_secret(
                 id=private_key_secret_id
             )
-            self._private_key = private_key_secret.get_content().get(
-                "private-key"
+            self._private_key = (
+                private_key_secret.get_content().get("private-key").encode()
             )
             return
 
@@ -923,7 +922,7 @@ class TlsCertificatesHandler(RelationHandler):
     def private_key(self):
         """Private key for certificates."""
         logger.debug("Returning private key: {}".format(self._private_key))
-        return self._private_key
+        return self._private_key.decode()
 
     def update_relation_data(self):
         """Request certificates outside of relation context."""
