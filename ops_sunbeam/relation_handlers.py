@@ -927,7 +927,11 @@ class TlsCertificatesHandler(RelationHandler):
     def private_key(self):
         """Private key for certificates."""
         logger.debug("Returning private key: {}".format(self._private_key))
-        return self._private_key.decode()
+        if self._private_key:
+            return self._private_key.decode()
+        else:
+            # Private key has not been set yet
+            return None
 
     def update_relation_data(self):
         """Request certificates outside of relation context."""
