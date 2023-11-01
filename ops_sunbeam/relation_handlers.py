@@ -300,6 +300,14 @@ class DBHandler(RelationHandler):
             getattr(db.on, f"{alias}_endpoints_changed"),
             self._on_database_updated,
         )
+
+        # Gone away events are not handled by the database interface library.
+        # So handle them in this class
+        self.framework.observe(
+            self.charm.on[self.relation_name].relation_broken,
+            self._on_database_relation_broken,
+        )
+
         # this will be set to self.interface in parent class
         return db
 
@@ -314,6 +322,13 @@ class DBHandler(RelationHandler):
             display_data["password"] = "REDACTED"
         logger.info(f"Received data: {display_data}")
         self.callback_f(event)
+
+    def _on_database_relation_broken(
+        self, event: ops.framework.EventBase
+    ) -> None:
+        """Handle database gone away event."""
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     def get_relation_data(self) -> dict:
         """Load the data from the relation for consumption in the handler."""
@@ -1182,6 +1197,8 @@ class IdentityResourceRequiresHandler(RelationHandler):
         """Handles provider_goneaway  event."""
         logger.info("Keystone provider not available process any requests")
         self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     def _on_response_available(self, event) -> None:
         """Handles response available  events."""
@@ -1252,6 +1269,8 @@ class CeilometerServiceRequiresHandler(RelationHandler):
         """Handle gone_away  event."""
         logger.debug("Ceilometer service relation is departed/broken")
         self.callback_f(event)
+        if self.mandatory:
+            self.status.set(BlockedStatus("integration missing"))
 
     @property
     def ready(self) -> bool:

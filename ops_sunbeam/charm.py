@@ -35,6 +35,8 @@ import urllib
 from typing import (
     List,
     Mapping,
+    Optional,
+    Set,
 )
 
 import ops.charm
@@ -234,9 +236,12 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         ):
             raise sunbeam_guard.WaitingExceptionError("Leader not ready")
 
-    def check_relation_handlers_ready(self):
+    def check_relation_handlers_ready(self, event: ops.framework.EventBase):
         """Check all relation handlers are ready."""
-        if not self.relation_handlers_ready():
+        not_ready_relations = self.get_mandatory_relations_not_ready(event)
+        if not_ready_relations:
+            logger.info(f"Relations {not_ready_relations} incomplete")
+            self.stop_services(not_ready_relations)
             raise sunbeam_guard.WaitingExceptionError(
                 "Not all relations are ready"
             )
@@ -252,7 +257,7 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
     def configure_unit(self, event: ops.framework.EventBase) -> None:
         """Run configuration on this unit."""
         self.check_leader_ready()
-        self.check_relation_handlers_ready()
+        self.check_relation_handlers_ready(event)
         self._state.unit_bootstrapped = True
 
     def configure_app_leader(self, event):
@@ -292,6 +297,10 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
             self.configure_app(event)
             self.bootstrap_status.set(ActiveStatus())
             self.post_config_setup()
+
+    def stop_services(self, relation: Optional[Set[str]] = None) -> None:
+        """Stop all running services."""
+        # Machine charms should implement this function if required.
 
     @property
     def supports_peer_relation(self) -> bool:
@@ -354,22 +363,125 @@ class OSBaseOperatorCharm(ops.charm.CharmBase):
         # charms should handle the event if required
         pass
 
-    def relation_handlers_ready(self) -> bool:
-        """Determine whether all relations are ready for use."""
+    def check_broken_relations(
+        self, relations: set, event: ops.framework.EventBase
+    ) -> set:
+        """Return all broken relations on given set of relations."""
+        broken_relations = set()
+
+        # Check for each relation if the event is gone away event.
+        # lazy import the events
+        # Note: Ceph relation not handled as there is no gone away event.
+        for relation in relations:
+            _is_broken = False
+            match relation:
+                case "database" | "api-database" | "cell-database":
+                    from ops.charm import (
+                        RelationBrokenEvent,
+                    )
+
+                    if isinstance(event, RelationBrokenEvent):
+                        _is_broken = True
+                case "ingress-public" | "ingress-internal":
+                    from charms.traefik_k8s.v2.ingress import (
+                        IngressPerAppRevokedEvent,
+                    )
+
+                    if isinstance(event, IngressPerAppRevokedEvent):
+                        _is_broken = True
+                case "identity-service":
+                    from charms.keystone_k8s.v1.identity_service import (
+                        IdentityServiceGoneAwayEvent,
+                    )
+
+                    if isinstance(event, IdentityServiceGoneAwayEvent):
+                        _is_broken = True
+                case "amqp":
+                    from charms.rabbitmq_k8s.v0.rabbitmq import (
+                        RabbitMQGoneAwayEvent,
+                    )
+
+                    if isinstance(event, RabbitMQGoneAwayEvent):
+                        _is_broken = True
+                case "certificates":
+                    from charms.tls_certificates_interface.v1.tls_certificates import (
+                        CertificateExpiredEvent,
+                    )
+
+                    if isinstance(event, CertificateExpiredEvent):
+                        _is_broken = True
+                case "ovsdb-cms":
+                    from charms.ovn_central_k8s.v0.ovsdb import (
+                        OVSDBCMSGoneAwayEvent,
+                    )
+
+                    if isinstance(event, OVSDBCMSGoneAwayEvent):
+                        _is_broken = True
+                case "identity-credentials":
+                    from charms.keystone_k8s.v0.identity_credentials import (
+                        IdentityCredentialsGoneAwayEvent,
+                    )
+
+                    if isinstance(event, IdentityCredentialsGoneAwayEvent):
+                        _is_broken = True
+                case "identity-ops":
+                    from charms.keystone_k8s.v0.identity_resource import (
+                        IdentityOpsProviderGoneAwayEvent,
+                    )
+
+                    if isinstance(event, IdentityOpsProviderGoneAwayEvent):
+                        _is_broken = True
+                case "gnocchi-db":
+                    from charms.gnocchi_k8s.v0.gnocchi_service import (
+                        GnocchiServiceGoneAwayEvent,
+                    )
+
+                    if isinstance(event, GnocchiServiceGoneAwayEvent):
+                        _is_broken = True
+                case "ceph-access":
+                    from charms.cinder_ceph_k8s.v0.ceph_access import (
+                        CephAccessGoneAwayEvent,
+                    )
+
+                    if isinstance(event, CephAccessGoneAwayEvent):
+                        _is_broken = True
+                case "dns-backend":
+                    from charms.designate_bind_k8s.v0.bind_rndc import (
+                        BindRndcGoneAwayEvent,
+                    )
+
+                    if isinstance(event, BindRndcGoneAwayEvent):
+                        _is_broken = True
+
+            if _is_broken:
+                broken_relations.add(relation)
+
+        return broken_relations
+
+    def get_mandatory_relations_not_ready(
+        self, event: ops.framework.EventBase
+    ) -> Set[str]:
+        """Get mandatory relations that are not ready for use."""
         ready_relations = {
             handler.relation_name
             for handler in self.relation_handlers
             if handler.mandatory and handler.ready
         }
+
+        # The relation data for broken relations are not cleared during
+        # processing of gone away event. This is a temporary workaround
+        # to mark broken relations as not ready.
+        # The workaround can be removed once the below bug is resolved
+        # https://bugs.launchpad.net/juju/+bug/2024583
+        # https://github.com/canonical/operator/issues/940
+        broken_relations = self.check_broken_relations(ready_relations, event)
+        ready_relations = ready_relations.difference(broken_relations)
+
         not_ready_relations = self.mandatory_relations.difference(
             ready_relations
         )
 
-        if len(not_ready_relations) != 0:
-            logger.info(f"Relations {not_ready_relations} incomplete")
-            return False
-
-        return True
+        return not_ready_relations
 
     def contexts(self) -> sunbeam_core.OPSCharmContexts:
         """Construct context for rendering templates."""
@@ -495,10 +607,19 @@ class OSBaseOperatorCharmK8S(OSBaseOperatorCharm):
                     "Container service not ready"
                 )
 
+    def stop_services(self, relation: Optional[Set[str]] = None) -> None:
+        """Stop all running services."""
+        for ph in self.pebble_handlers:
+            if ph.pebble_ready:
+                logging.debug(
+                    f"Stopping all services in container {ph.container_name}"
+                )
+                ph.stop_all()
+
     def configure_unit(self, event: ops.framework.EventBase) -> None:
         """Run configuration on this unit."""
         self.check_leader_ready()
-        self.check_relation_handlers_ready()
+        self.check_relation_handlers_ready(event)
         self.open_ports()
         self.init_container_services()
         self.check_pebble_handlers_ready()

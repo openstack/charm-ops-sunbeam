@@ -302,6 +302,20 @@ class PebbleHandler(ops.charm.Object):
                 )
                 container.restart(service_name)
 
+    def stop_all(self) -> None:
+        """Stop services in container."""
+        container = self.charm.unit.get_container(self.container_name)
+        if not container.can_connect():
+            logger.debug(
+                f"Container {self.container_name} not ready, no need to stop"
+            )
+            return
+
+        services = container.get_services()
+        if services:
+            logger.debug("Stopping all services")
+            container.stop(*services.keys())
+
 
 class ServicePebbleHandler(PebbleHandler):
     """Container handler for containers which manage a service."""

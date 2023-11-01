@@ -554,6 +554,8 @@ class OVSDBCMSRequiresHandler(
         """Handle OVSDB CMS change events."""
         self.callback_f(event)
         if self.mandatory:
+            logger.debug("ovsdb-cms integration removed, stop services")
+            self.charm.stop_services({self.relation_name})
             self.status.set(BlockedStatus("integration missing"))
 
     @property
