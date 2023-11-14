@@ -661,7 +661,7 @@ class OSBaseOperatorCharmK8S(OSBaseOperatorCharm):
         return self.service_name
 
     @tenacity.retry(
-        stop=tenacity.stop_after_attempt(3),
+        stop=tenacity.stop_after_attempt(10),
         retry=(
             tenacity.retry_if_exception_type(ops.pebble.ChangeError)
             | tenacity.retry_if_exception_type(ops.pebble.ExecError)
