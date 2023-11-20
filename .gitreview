@@ -2,4 +2,4 @@
 host=review.opendev.org
 port=29418
 project=openstack/charm-ops-sunbeam.git
-defaultbranch=main
+defaultbranch=stable/2023.2.1
