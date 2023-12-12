@@ -1,9 +1,0 @@
-{
-    "service_name": "",
-    "charm_name": "",
-    "ingress_port": "",
-    "db_sync_command": "",
-    "_copy_without_render": [
-        "src/templates"
-    ]
-}

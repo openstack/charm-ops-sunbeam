@@ -1,27 +1,12 @@
-=============================================
-Sunbeam OpenStack libraries and documentation
-=============================================
+This repository has been merged into the
+`Sunbeam Charms <https://opendev.org/openstack/sunbeam-charms>`_
+repository.
 
-Tutorials
----------
+The contents of this repository are still available in the Git
+source code management system.  To see the contents of this
+repository before it reached its end of life, please check out the
+previous commit with "git checkout HEAD^1".
 
-* `Deploying Sunbeam Charms <doc/deploy-sunbeam-charms.rst>`_
-* `Writing an OpenStack API charm with Sunbeam <doc/writing-OS-API-charm.rst>`_
-
-How-Tos
--------
-
-* `How-To write a pebble handler <doc/howto-pebble-handler.rst>`_
-* `How-To write a relation handler <doc/howto-relation-handler.rst>`_
-* `How-To write a charm context <doc/howto-config-context.rst>`_
-* `How-To expose services outside of K8S <doc/howto-expose-services.rst>`_
-
-Reference
----------
-
-
-
-Concepts
---------
-
-`Sunbeam Concepts <doc/concepts.rst>`_
+For any further questions, please email
+openstack-discuss@lists.openstack.org or join #openstack-sunbeam on
+OFTC.
